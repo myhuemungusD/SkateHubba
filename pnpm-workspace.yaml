@@ -1,7 +1,8 @@
 packages:
-  - '.'
-  - 'client'
-  - 'server'
-  - 'shared'
-  - 'infra/firebase/functions'
-  - 'mobile'
+  - '.'                         # The root itself
+  - 'client'                    # Next.js frontend (main web app)
+  - 'server'                    # API / Backend logic
+  - 'shared'                    # Shared Zod schemas and types
+  - 'infra/firebase/functions'  # Firebase Cloud Functions
+  - 'mobile'                    # Future mobile app
+  - 'apps/*'                    # Any future sub-apps
