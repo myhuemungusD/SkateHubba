@@ -89,11 +89,15 @@ export default function Checkout() {
   const { snapshot } = useCart();
   const snap = snapshot();
 
+  // Capture items and subtotal once on initial render to avoid re-fetching
+  // when cart changes during checkout flow
+  const [initialSnap] = useState(() => snap);
+
   useEffect(() => {
     // Create PaymentIntent as soon as the page loads
-    if (snap.subtotal > 0) {
+    if (initialSnap.subtotal > 0) {
       apiRequest("POST", "/api/create-shop-payment-intent", { 
-        items: snap.items 
+        items: initialSnap.items 
       })
         .then((res: Response) => res.json())
         .then((data: { clientSecret?: string; message?: string }) => {
@@ -107,7 +111,7 @@ export default function Checkout() {
           setError(err.message || "Failed to initialize payment");
         });
     }
-  }, []);
+  }, [initialSnap]);
 
   if (snap.subtotal === 0) {
     return (
