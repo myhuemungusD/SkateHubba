@@ -7,16 +7,18 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "baseUrl": ".",
+    "baseUrl": "..",
+    "rootDir": "..",
     "paths": {
-      "@/*": ["./src/*"],
-      "@shared/*": ["../shared/*"],
-      "@shared": ["../shared/index"]
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"],
+      "@shared": ["./shared/index"]
     },
     "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo"
   },
   "include": [
     "src",
+    "../shared",
     "vite.config.ts",
     "tailwind.config.ts",
     "postcss.config.js",
