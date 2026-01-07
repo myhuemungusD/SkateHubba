@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
       
       # Download the artifacts to the 'client/dist' folder so the path matches
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with: 
           name: production-dist
           path: client/dist
