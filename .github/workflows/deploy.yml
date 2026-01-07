@@ -1,8 +1,3 @@
-name: Production Release
-on:
-  push: { branches: [main] }
-  workflow_dispatch:
-
 jobs:
   build_and_test:
     name: "Build & Verify"
@@ -12,11 +7,20 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: 'pnpm' }
+      
       - run: pnpm install
-      - run: pnpm run typecheck
-      - run: pnpm run build
+      
+      # Run checks on the client specifically
+      - run: pnpm -C client typecheck
+      
+      # Build the client (This creates client/dist)
+      - run: pnpm -C client build
+      
+      # Upload only the client build artifacts for deployment
       - uses: actions/upload-artifact@v4
-        with: { name: production-dist, path: dist }
+        with: 
+          name: production-dist
+          path: client/dist
 
   deploy_firebase:
     needs: [build_and_test]
@@ -25,16 +29,25 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      
+      # Download the artifacts to the 'client/dist' folder so the path matches
       - uses: actions/download-artifact@v4
-        with: { name: production-dist, path: dist }
+        with: 
+          name: production-dist
+          path: client/dist
+          
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SKATEHUBBA }}
           projectId: skatehubba-app
           channelId: live
-        env: { FIREBASE_CLI_PREVIEWS: hostingchannels }
+        env: 
+          FIREBASE_CLI_PREVIEWS: hostingchannels
 
+  # Vercel typically builds from source, so we keep the checkout step.
+  # If you want Vercel to use the pre-built artifacts, you would need to adjust 
+  # the Vercel project settings to "Override Build Command" to empty.
   deploy_vercel:
     needs: [build_and_test]
     name: "Deploy: Vercel"
@@ -48,6 +61,8 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
+          # Ensure Vercel knows to look in the 'client' directory if that's how your project is set up
+          working-directory: ./client
 
   verify_production:
     needs: [deploy_firebase, deploy_vercel]
