@@ -1,21 +1,35 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
+/**
+ * Throws a useful error when the response is not OK.
+ */
+async function throwIfResNotOk(res: Response): Promise<void> {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
 }
 
+/**
+ * Standard API request helper.
+ * - Deterministic headers (no unions)
+ * - Safe for strict TypeScript + fetch overloads
+ */
 export async function apiRequest(
   method: string,
   url: string,
-  data?: unknown  ,
+  data?: unknown,
 ): Promise<Response> {
+  const headers: HeadersInit = {};
+
+  if (data !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body: data !== undefined ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
 
@@ -24,23 +38,30 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
+
+/**
+ * Factory for React Query query functions.
+ * Handles 401 behavior explicitly and safely.
+ */
+export const getQueryFn =
+  <T>(options: { on401: UnauthorizedBehavior }): QueryFunction<T | null> =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/"), {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+    if (options.on401 === "returnNull" && res.status === 401) {
       return null;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    return (await res.json()) as T;
   };
 
+/**
+ * Centralized QueryClient configuration.
+ * Locked for predictable, production-safe behavior.
+ */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
