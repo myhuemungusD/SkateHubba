@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.2",
     "prettier": "^3.0.0",
     "typescript": "^5.9.3"
@@ -28,7 +28,7 @@
   "pnpm": {
     "overrides": {
       "zod": "3.23.8",
-      "drizzle-zod": "0.7.0"
+      "drizzle-zod": "0.8.3"
     },
     "onlyBuiltDependencies": [
       "esbuild",
