@@ -1,6 +1,8 @@
 name: Workflow Validator
 
 on: [push, pull_request]
+permissions:
+  contents: read
 
 jobs:
   validate:
