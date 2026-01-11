@@ -11,25 +11,22 @@ async function throwIfResNotOk(res: Response): Promise<void> {
 }
 
 /**
- * Standard API request helper.
- * - Deterministic headers (no unions)
- * - Safe for strict TypeScript + fetch overloads
+ * Simple API request helper.
+ * Keeps headers deterministic for TypeScript.
  */
 export async function apiRequest(
   method: string,
   url: string,
-  data?: unknown,
+  data?: unknown
 ): Promise<Response> {
-  const headers: HeadersInit = {};
-
-  if (data !== undefined) {
-    headers["Content-Type"] = "application/json";
-  }
+  const headers: HeadersInit = data
+    ? { "Content-Type": "application/json" }
+    : undefined;
 
   const res = await fetch(url, {
     method,
     headers,
-    body: data !== undefined ? JSON.stringify(data) : undefined,
+    body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
 
@@ -40,28 +37,23 @@ export async function apiRequest(
 type UnauthorizedBehavior = "returnNull" | "throw";
 
 /**
- * Factory for React Query query functions.
- * Handles 401 behavior explicitly and safely.
+ * Default query function for React Query.
  */
 export const getQueryFn =
-  <T>(options: { on401: UnauthorizedBehavior }): QueryFunction<T | null> =>
+  <T>({ on401 }: { on401: UnauthorizedBehavior }): QueryFunction<T> =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/"), {
       credentials: "include",
     });
 
-    if (options.on401 === "returnNull" && res.status === 401) {
-      return null;
+    if (on401 === "returnNull" && res.status === 401) {
+      return null as T;
     }
 
     await throwIfResNotOk(res);
     return (await res.json()) as T;
   };
 
-/**
- * Centralized QueryClient configuration.
- * Locked for predictable, production-safe behavior.
- */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

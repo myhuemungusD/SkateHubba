@@ -9,7 +9,10 @@
   },
   "scripts": {
     "dev": "concurrently \"pnpm --filter ./client dev\" \"pnpm --filter ./server dev\"",
+    "start": "tsx server/index.ts",
     "build": "pnpm --filter ./shared build && pnpm --filter ./client build && pnpm --filter ./server build && pnpm run package:dist",
+    "build:ci": "pnpm install --frozen-lockfile && pnpm build",
+    "check": "pnpm -r run typecheck",
     "package:dist": "node scripts/assemble-dist.mjs",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm -r run typecheck",
@@ -23,12 +26,18 @@
   },
   "pnpm": {
     "overrides": {
-      "zod": "3.25.76"
+      "zod": "3.23.8",
+      "drizzle-zod": "0.7.0"
     },
     "onlyBuiltDependencies": [
       "esbuild",
       "@firebase/util",
       "protobufjs"
     ]
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.8.3",
+    "pg": "^8.16.3"
   }
 }
