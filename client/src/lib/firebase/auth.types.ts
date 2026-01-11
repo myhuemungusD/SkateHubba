@@ -85,6 +85,8 @@ export interface AuthContextValue extends AuthState {
   signInWithGoogle: () => Promise<void>;
   /** Sign out current user */
   signOut: () => Promise<void>;
+  /** Send password reset email */
+  resetPassword: (email: string) => Promise<void>;
   /** Clear current error */
   clearError: () => void;
 }

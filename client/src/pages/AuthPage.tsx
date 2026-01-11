@@ -54,11 +54,21 @@ type SignUpForm = z.infer<typeof signUpSchema>;
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { signIn, signUp, signInWithGoogle, isLoading } = useAuth();
+  const auth = useAuth();
   
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  
+  // Handle case where auth context is not available yet
+  const signIn = auth?.signIn;
+  const signUp = auth?.signUp;
+  const signInWithGoogle = auth?.signInWithGoogle;
+  const resetPassword = auth?.resetPassword;
+  const isLoading = auth?.isLoading ?? false;
 
   // Sign In Form
   const signInForm = useForm<SignInForm>({
@@ -74,15 +84,24 @@ export default function AuthPage() {
 
   // Handle Sign In
   const handleSignIn = async (data: SignInForm) => {
+    if (!signIn) {
+      toast({ title: 'Error', description: 'Authentication not ready. Please refresh.', variant: 'destructive' });
+      return;
+    }
     try {
+      console.log('[AuthPage] Attempting sign in...');
       await signIn(data.email, data.password);
+      console.log('[AuthPage] Sign in successful');
       toast({
         title: 'Welcome back! 🛹',
         description: 'You have successfully signed in.',
       });
       setLocation('/map');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign in failed';
+      console.error('[AuthPage] Sign in error:', error);
+      // Get the actual error message from AuthError
+      const authError = error as { message?: string; code?: string };
+      const message = authError.message || 'Sign in failed. Please check your credentials.';
       toast({
         title: 'Sign In Failed',
         description: message,
@@ -93,18 +112,27 @@ export default function AuthPage() {
 
   // Handle Sign Up
   const handleSignUp = async (data: SignUpForm) => {
+    if (!signUp) {
+      toast({ title: 'Error', description: 'Authentication not ready. Please refresh.', variant: 'destructive' });
+      return;
+    }
+    console.log('[AuthPage] handleSignUp called:', { email: data.email, firstName: data.firstName, lastName: data.lastName });
     try {
       await signUp(data.email, data.password, {
         firstName: data.firstName,
         lastName: data.lastName,
       });
+      console.log('[AuthPage] Sign up successful!');
       toast({
         title: 'Account Created! 📧',
         description: 'Please check your email to verify your account.',
       });
       setLocation('/verify');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign up failed';
+      console.error('[AuthPage] Sign up error:', error);
+      const authError = error as { message?: string; code?: string };
+      const message = authError.message || 'Sign up failed. Please try again.';
+      console.error('[AuthPage] Displaying error:', message);
       toast({
         title: 'Registration Failed',
         description: message,
@@ -115,6 +143,10 @@ export default function AuthPage() {
 
   // Handle Google Sign In
   const handleGoogleSignIn = async () => {
+    if (!signInWithGoogle) {
+      toast({ title: 'Error', description: 'Authentication not ready. Please refresh.', variant: 'destructive' });
+      return;
+    }
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
@@ -132,6 +164,39 @@ export default function AuthPage() {
       });
     } finally {
       setIsGoogleLoading(false);
+    }
+  };
+
+  // Handle Forgot Password
+  const handleForgotPassword = async () => {
+    if (!resetPassword) {
+      toast({ title: 'Error', description: 'Authentication not ready. Please refresh.', variant: 'destructive' });
+      return;
+    }
+    
+    if (!forgotPasswordEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotPasswordEmail)) {
+      toast({ title: 'Invalid Email', description: 'Please enter a valid email address.', variant: 'destructive' });
+      return;
+    }
+    
+    setIsResettingPassword(true);
+    try {
+      await resetPassword(forgotPasswordEmail);
+      toast({
+        title: 'Reset Email Sent 📧',
+        description: 'Check your inbox for password reset instructions.',
+      });
+      setShowForgotPassword(false);
+      setForgotPasswordEmail('');
+    } catch (error) {
+      const authError = error as { message?: string };
+      toast({
+        title: 'Reset Failed',
+        description: authError.message || 'Could not send reset email. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -197,7 +262,16 @@ export default function AuthPage() {
 
                   {/* Password */}
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password" className="text-gray-300">Password</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="signin-password" className="text-gray-300">Password</Label>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(true)}
+                        className="text-sm text-orange-500 hover:text-orange-400"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
@@ -414,6 +488,62 @@ export default function AuthPage() {
           </Link>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md bg-[#232323] border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-xl text-white">Reset Password</CardTitle>
+              <CardDescription className="text-gray-400">
+                Enter your email and we'll send you a link to reset your password
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email" className="text-gray-300">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    className="pl-10 bg-[#181818] border-gray-600 text-white placeholder:text-gray-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-white hover:bg-gray-700"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordEmail('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={handleForgotPassword}
+                  disabled={isResettingPassword}
+                >
+                  {isResettingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

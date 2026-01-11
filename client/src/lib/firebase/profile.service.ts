@@ -15,7 +15,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from './config';
+import { db as getDb } from './config';
 import { UserProfile, CreateProfileInput, AuthUser } from './auth.types';
 
 // ============================================================================
@@ -35,6 +35,7 @@ const USERS_COLLECTION = 'users';
  * @returns User profile or null if not found
  */
 export async function getProfile(uid: string): Promise<UserProfile | null> {
+  const db = getDb();
   try {
     const docRef = doc(db, USERS_COLLECTION, uid);
     const snapshot = await getDoc(docRef);
@@ -62,6 +63,7 @@ export async function createProfile(
   uid: string,
   input: CreateProfileInput
 ): Promise<UserProfile> {
+  const db = getDb();
   try {
     const displayName = input.displayName || 
       [input.firstName, input.lastName].filter(Boolean).join(' ').trim() ||
@@ -103,6 +105,7 @@ export async function updateProfile(
   uid: string,
   updates: Partial<Pick<UserProfile, 'displayName' | 'firstName' | 'lastName' | 'photoURL'>>
 ): Promise<void> {
+  const db = getDb();
   try {
     const docRef = doc(db, USERS_COLLECTION, uid);
     await updateDoc(docRef, {

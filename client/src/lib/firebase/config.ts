@@ -33,15 +33,20 @@ interface FirebaseConfig {
   measurementId?: string;
 }
 
-function getFirebaseConfig(): FirebaseConfig {
+function getFirebaseConfig(): FirebaseConfig | null {
   const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
   
   if (!apiKey || !projectId) {
-    throw new Error(
+    console.error(
       '[Firebase] Missing required configuration. ' +
       'Ensure VITE_FIREBASE_API_KEY and VITE_FIREBASE_PROJECT_ID are set in .env'
     );
+    console.error('[Firebase] Current env vars:', {
+      VITE_FIREBASE_API_KEY: apiKey ? 'SET' : 'MISSING',
+      VITE_FIREBASE_PROJECT_ID: projectId ? 'SET' : 'MISSING',
+    });
+    return null;
   }
   
   return {
@@ -59,16 +64,29 @@ function getFirebaseConfig(): FirebaseConfig {
 // Initialization
 // ============================================================================
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 let initialized = false;
+let initError: Error | null = null;
 
-function initializeFirebase(): void {
-  if (initialized) return;
+function initializeFirebase(): boolean {
+  if (initialized) return true;
+  if (initError) return false;
   
   try {
     const config = getFirebaseConfig();
+    
+    if (!config) {
+      initError = new Error('Firebase configuration missing');
+      return false;
+    }
+    
+    console.log('[Firebase] Initializing with config:', {
+      apiKey: config.apiKey ? config.apiKey.substring(0, 10) + '...' : 'MISSING',
+      projectId: config.projectId,
+      authDomain: config.authDomain,
+    });
     
     app = initializeApp(config);
     auth = getAuth(app);
@@ -82,10 +100,12 @@ function initializeFirebase(): void {
     }
     
     initialized = true;
-    console.info('[Firebase] Initialized successfully for project:', config.projectId);
+    console.info('[Firebase] ✅ Initialized successfully for project:', config.projectId);
+    return true;
   } catch (error) {
-    console.error('[Firebase] Initialization failed:', error);
-    throw error;
+    console.error('[Firebase] ❌ Initialization failed:', error);
+    initError = error as Error;
+    return false;
   }
 }
 
@@ -96,5 +116,38 @@ initializeFirebase();
 // Exports
 // ============================================================================
 
-export { app, auth, db };
+/**
+ * Get Firebase Auth instance (throws if not initialized)
+ */
+function getAuthInstance(): Auth {
+  if (!auth) {
+    initializeFirebase();
+    if (!auth) {
+      throw new Error('Firebase Auth not initialized. Check your environment variables.');
+    }
+  }
+  return auth;
+}
+
+/**
+ * Get Firestore instance (throws if not initialized)
+ */
+function getDbInstance(): Firestore {
+  if (!db) {
+    initializeFirebase();
+    if (!db) {
+      throw new Error('Firestore not initialized. Check your environment variables.');
+    }
+  }
+  return db;
+}
+
+/**
+ * Check if Firebase is properly initialized
+ */
+export function isFirebaseInitialized(): boolean {
+  return initialized && auth !== null && db !== null;
+}
+
+export { app, getAuthInstance as auth, getDbInstance as db };
 export type { FirebaseApp, Auth, Firestore };

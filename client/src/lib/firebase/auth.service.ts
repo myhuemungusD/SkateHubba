@@ -18,6 +18,7 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   sendEmailVerification,
+  sendPasswordResetEmail,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
@@ -27,7 +28,7 @@ import {
   User as FirebaseUser,
   Unsubscribe,
 } from 'firebase/auth';
-import { auth } from './config';
+import { auth as getAuth } from './config';
 import { AuthUser, AuthError, AuthErrorCode } from './auth.types';
 import { toAuthUser } from './auth.types';
 
@@ -57,10 +58,12 @@ const ERROR_MESSAGES: Record<string, string> = {
  * Transform Firebase errors into structured AuthError objects
  */
 function createAuthError(error: unknown): AuthError {
+  console.error('[AuthService] Auth error:', error);
   const firebaseError = error as { code?: string; message?: string };
   const code = (firebaseError.code as AuthErrorCode) || 'unknown';
   const message = ERROR_MESSAGES[code] || firebaseError.message || 'An unexpected error occurred.';
   
+  console.error('[AuthService] Mapped error:', { code, message });
   return { code, message, originalError: error };
 }
 
@@ -82,8 +85,14 @@ export async function signUpWithEmail(
   password: string,
   profile?: { firstName?: string; lastName?: string }
 ): Promise<AuthUser> {
+  const auth = getAuth();
+  console.log('[AuthService] signUpWithEmail called with:', { email, profile });
+  console.log('[AuthService] Auth instance:', auth ? 'exists' : 'NULL');
+  
   try {
+    console.log('[AuthService] Calling createUserWithEmailAndPassword...');
     const credential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log('[AuthService] Sign up successful, user:', credential.user.uid);
     const user = credential.user;
     
     // Set display name if provided
@@ -117,10 +126,14 @@ export async function signInWithEmail(
   email: string,
   password: string
 ): Promise<AuthUser> {
+  const auth = getAuth();
+  console.log('[AuthService] Attempting sign in for:', email);
   try {
     const credential = await signInWithEmailAndPassword(auth, email, password);
+    console.log('[AuthService] Sign in successful for:', credential.user.uid);
     return toAuthUser(credential.user);
   } catch (error) {
+    console.error('[AuthService] Sign in failed:', error);
     throw createAuthError(error);
   }
 }
@@ -149,6 +162,7 @@ function isMobileDevice(): boolean {
  * @throws AuthError if sign-in fails
  */
 export async function signInWithGoogle(): Promise<AuthUser | null> {
+  const auth = getAuth();
   try {
     if (isMobileDevice()) {
       // Mobile: Use redirect flow
@@ -183,6 +197,7 @@ export async function signInWithGoogle(): Promise<AuthUser | null> {
  * @returns The authenticated user if redirect succeeded, null otherwise
  */
 export async function getGoogleRedirectResult(): Promise<AuthUser | null> {
+  const auth = getAuth();
   try {
     const result = await getRedirectResult(auth);
     return result ? toAuthUser(result.user) : null;
@@ -201,6 +216,7 @@ export async function getGoogleRedirectResult(): Promise<AuthUser | null> {
  * @throws AuthError if sign-out fails
  */
 export async function signOutUser(): Promise<void> {
+  const auth = getAuth();
   try {
     await firebaseSignOut(auth);
   } catch (error) {
@@ -217,6 +233,7 @@ export async function signOutUser(): Promise<void> {
 export function onAuthStateChange(
   callback: (user: AuthUser | null) => void
 ): Unsubscribe {
+  const auth = getAuth();
   return onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
     callback(firebaseUser ? toAuthUser(firebaseUser) : null);
   });
@@ -228,7 +245,23 @@ export function onAuthStateChange(
  * @returns Current user or null if not authenticated
  */
 export function getCurrentUser(): AuthUser | null {
+  const auth = getAuth();
   return auth.currentUser ? toAuthUser(auth.currentUser) : null;
+}
+
+/**
+ * Send password reset email
+ * 
+ * @param email - User's email address
+ * @throws AuthError if sending fails
+ */
+export async function resetPassword(email: string): Promise<void> {
+  const auth = getAuth();
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (error) {
+    throw createAuthError(error);
+  }
 }
 
 /**
@@ -237,6 +270,7 @@ export function getCurrentUser(): AuthUser | null {
  * @throws AuthError if sending fails
  */
 export async function resendVerificationEmail(): Promise<void> {
+  const auth = getAuth();
   try {
     const user = auth.currentUser;
     if (!user) {

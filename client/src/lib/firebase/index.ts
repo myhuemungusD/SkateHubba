@@ -8,7 +8,7 @@
  */
 
 // Configuration & Instances
-export { auth, db, app } from './config';
+export { app, auth, db, isFirebaseInitialized } from './config';
 
 // Auth Service
 export {
@@ -20,6 +20,7 @@ export {
   onAuthStateChange,
   getCurrentUser,
   resendVerificationEmail,
+  resetPassword,
 } from './auth.service';
 
 // Profile Service

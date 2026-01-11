@@ -35,6 +35,7 @@ import {
   signOutUser,
   onAuthStateChange,
   getOrCreateProfile,
+  resetPassword as resetPasswordService,
   AuthUser,
   UserProfile,
   AuthContextValue,
@@ -105,18 +106,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     password: string,
     profileData?: { firstName?: string; lastName?: string }
   ): Promise<void> => {
+    console.log('[AuthProvider] handleSignUp called:', { email, profileData });
     setError(null);
     setIsLoading(true);
     
     try {
+      console.log('[AuthProvider] Calling signUpWithEmail...');
       const newUser = await signUpWithEmail(email, password, profileData);
+      console.log('[AuthProvider] signUpWithEmail returned user:', newUser?.uid);
       const newProfile = await getOrCreateProfile(newUser, profileData);
       setUser(newUser);
       setProfile(newProfile);
     } catch (err) {
+      console.error('[AuthProvider] signUp error:', err);
       const authError = err as AuthError;
-      setError(authError.message);
-      throw err;
+      const errorMessage = authError.message || 'Sign up failed';
+      console.error('[AuthProvider] Throwing error with message:', errorMessage);
+      setError(errorMessage);
+      // Re-throw with proper message
+      const error = new Error(errorMessage);
+      (error as any).code = authError.code;
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -131,14 +141,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
     
     try {
+      console.log('[AuthProvider] Calling signInWithEmail...');
       const authUser = await signInWithEmail(email, password);
+      console.log('[AuthProvider] Sign in successful, fetching profile...');
       const userProfile = await getOrCreateProfile(authUser);
+      console.log('[AuthProvider] Profile loaded');
       setUser(authUser);
       setProfile(userProfile);
     } catch (err) {
+      console.error('[AuthProvider] Sign in error:', err);
       const authError = err as AuthError;
-      setError(authError.message);
-      throw err;
+      const errorMessage = authError.message || 'Sign in failed';
+      setError(errorMessage);
+      // Re-throw with proper message
+      const error = new Error(errorMessage);
+      (error as any).code = authError.code;
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -181,6 +199,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  // Reset password
+  const handleResetPassword = useCallback(async (email: string): Promise<void> => {
+    setError(null);
+    
+    try {
+      await resetPasswordService(email);
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError.message);
+      throw err;
+    }
+  }, []);
+
   // Clear error
   const clearError = useCallback(() => {
     setError(null);
@@ -197,6 +228,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signIn: handleSignIn,
     signInWithGoogle: handleSignInWithGoogle,
     signOut: handleSignOut,
+    resetPassword: handleResetPassword,
     clearError,
   }), [
     user,
@@ -207,6 +239,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     handleSignIn,
     handleSignInWithGoogle,
     handleSignOut,
+    handleResetPassword,
     clearError,
   ]);
 
@@ -225,16 +258,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
  * Hook to access authentication context
  * Must be used within an AuthProvider
  * 
- * @returns Authentication context value
- * @throws Error if used outside AuthProvider
+ * @returns Authentication context value (nullable if not in provider)
  */
-export function useAuth(): AuthContextValue {
+export function useAuth(): AuthContextValue | null {
   const context = useContext(AuthContext);
   
-  if (!context) {
-    throw new Error(
-      'useAuth must be used within an AuthProvider. ' +
-      'Wrap your app with <AuthProvider> in your root component.'
+  // Log warning but don't crash in development
+  if (!context && import.meta.env.DEV) {
+    console.warn(
+      '[useAuth] Called outside AuthProvider. Some components may use this during initial render.'
     );
   }
   
