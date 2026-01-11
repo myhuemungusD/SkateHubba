@@ -5,7 +5,9 @@
   "scripts": {
     "start": "tsx index.ts",
     "dev": "tsx watch index.ts",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "node ../scripts/build-server.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
