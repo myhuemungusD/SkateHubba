@@ -12,7 +12,7 @@ async function throwIfResNotOk(res: Response): Promise<void> {
 
 /**
  * Simple API request helper.
- * Keeps headers deterministic for TypeScript.
+ * Always passes a valid HeadersInit for TypeScript.
  */
 export async function apiRequest(
   method: string,
@@ -21,7 +21,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const headers: HeadersInit = data
     ? { "Content-Type": "application/json" }
-    : undefined;
+    : {};
 
   const res = await fetch(url, {
     method,
