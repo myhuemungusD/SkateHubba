@@ -1,25 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Navigation as NavigationIcon, X, AlertCircle, Plus, Clock, Eye, Search } from 'lucide-react';
+import { MapPin, Navigation as NavigationIcon, AlertCircle, Plus, Clock, Eye, Search } from 'lucide-react';
 import type { Spot } from '@shared/schema';
-import { ARCheckInButton } from '../components/ARCheckInButton';
-import { ARTrickViewer } from '../components/ARTrickViewer';
 import { AddSpotModal } from '../components/map/AddSpotModal';
+import { SpotDetailModal } from '../components/map/SpotDetailModal';
 import Navigation from '../components/Navigation';
 import { SpotMap } from '../components/SpotMap';
-import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../components/ui/sheet';
 import { useToast } from '../hooks/use-toast';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { calculateDistance, formatDistance, getProximity } from '../lib/distance';
+import { calculateDistance, getProximity } from '../lib/distance';
 
 type SkateSpot = Spot;
 type SpotWithDistance = Spot & {
@@ -29,7 +20,7 @@ type SpotWithDistance = Spot & {
 
 export default function MapPage() {
   const { toast } = useToast();
-  const [selectedSpot, setSelectedSpot] = useState<SkateSpot | null>(null);
+  const [selectedSpotId, setSelectedSpotId] = useState<number | null>(null);
   const [isAddSpotOpen, setIsAddSpotOpen] = useState(false);
   const geolocation = useGeolocation(true);
 
@@ -76,18 +67,6 @@ export default function MapPage() {
     }
   }, [geolocation.status, geolocation.error, toast]);
 
-  const getProximityBadge = (proximity: 'here' | 'nearby' | 'far' | null, distance: number | null) => {
-    if (!proximity || distance === null) return null;
-    
-    if (proximity === 'here') {
-      return <Badge className="bg-success/20 text-success border-success/30">✓ Check-in Available</Badge>;
-    } else if (proximity === 'nearby') {
-      return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">{formatDistance(distance)} away</Badge>;
-    } else {
-      return <Badge variant="outline" className="text-gray-400">{formatDistance(distance)} away</Badge>;
-    }
-  };
-
   return (
     <div className="h-dvh flex flex-col bg-[#181818] overflow-hidden">
       <Navigation />
@@ -101,10 +80,9 @@ export default function MapPage() {
               ? { lat: geolocation.latitude, lng: geolocation.longitude, accuracy: geolocation.accuracy }
               : null
           }
-          selectedSpotId={selectedSpot?.id ?? null}
+          selectedSpotId={selectedSpotId}
           onSelectSpot={(spotId) => {
-            const spot = spots.find(s => s.id === spotId);
-            setSelectedSpot(spot || null);
+            setSelectedSpotId(spotId);
           }}
         />
 
@@ -209,73 +187,17 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Bottom sheet for spot details */}
-      <Sheet open={selectedSpot !== null} onOpenChange={(open) => !open && setSelectedSpot(null)}>
-        <SheetContent side="bottom" className="bg-black/95 border-gray-600 backdrop-blur-md h-[70vh]">
-          {selectedSpot && (
-            <>
-              <SheetHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <SheetTitle className="text-[#fafafa] text-2xl flex items-center gap-2">
-                      <MapPin className="w-6 h-6 text-[#ff6a00]" />
-                      {selectedSpot.name}
-                    </SheetTitle>
-                    <SheetDescription className="text-gray-300 mt-1">
-                      {selectedSpot.lat.toFixed(5)}, {selectedSpot.lng.toFixed(5)}
-                    </SheetDescription>
-                    <div className="flex gap-2 mt-3">
-                      {(() => {
-                        const spotWithDistance = spotsWithDistance.find(s => s.id === selectedSpot.id);
-                        return getProximityBadge(spotWithDistance?.proximity || null, spotWithDistance?.distance || null);
-                      })()}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedSpot(null)}
-                    className="text-gray-400 hover:text-white"
-                    data-testid="button-close-spot-details"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-              </SheetHeader>
-
-              <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(70vh-200px)]">
-                <div>
-                  <h3 className="text-[#fafafa] font-semibold mb-2">Location</h3>
-                  <p className="text-gray-300">
-                    {selectedSpot.lat.toFixed(5)}, {selectedSpot.lng.toFixed(5)}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-[#fafafa] font-semibold mb-2">Added</h3>
-                  <p className="text-gray-300">
-                    {new Date(selectedSpot.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-
-                <ARCheckInButton
-                  spotId={String(selectedSpot.id)}
-                  spotName={selectedSpot.name}
-                  spotLat={selectedSpot.lat}
-                  spotLng={selectedSpot.lng}
-                  className="w-full"
-                  locationUnavailable={!geolocation.hasLocation}
-                />
-
-                <ARTrickViewer
-                  spotId={String(selectedSpot.id)}
-                  spotName={selectedSpot.name}
-                />
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      {/* Spot Detail Modal */}
+      <SpotDetailModal
+        spotId={selectedSpotId}
+        isOpen={selectedSpotId !== null}
+        onClose={() => setSelectedSpotId(null)}
+        userLocation={
+          geolocation.latitude !== null && geolocation.longitude !== null
+            ? { lat: geolocation.latitude, lng: geolocation.longitude }
+            : null
+        }
+      />
     </div>
   );
 }
