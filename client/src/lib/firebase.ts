@@ -42,6 +42,7 @@ try {
     throw new Error("Missing Firebase API Key");
   }
 } catch (error) {
+  logger.error('[Firebase] Failed to initialize Firebase. Falling back to mock mode.');
   logger.warn('[Firebase] Using mock mode');
   app = { 
     name: '[DEFAULT]',
