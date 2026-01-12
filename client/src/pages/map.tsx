@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MapPin, Navigation as NavigationIcon, AlertCircle, Plus, Clock, Eye, Search } from 'lucide-react';
 import type { Spot } from '@shared/schema';
@@ -29,19 +29,22 @@ export default function MapPage() {
     queryKey: ['/api/spots'],
   });
 
-  // Calculate distances and add to spots
-  const spotsWithDistance: SpotWithDistance[] = spots.map(spot => {
-    if (geolocation.latitude !== null && geolocation.longitude !== null) {
-      const distance = calculateDistance(
-        geolocation.latitude,
-        geolocation.longitude,
-        spot.lat,
-        spot.lng
-      );
-      return { ...spot, distance, proximity: getProximity(distance) };
-    }
-    return { ...spot, distance: null, proximity: null };
-  });
+  // Memoized distance calculation - only recalculates when spots or location changes
+  // Prevents render thrashing when opening modals or toggling UI state
+  const spotsWithDistance = useMemo<SpotWithDistance[]>(() => {
+    return spots.map(spot => {
+      if (geolocation.latitude !== null && geolocation.longitude !== null) {
+        const distance = calculateDistance(
+          geolocation.latitude,
+          geolocation.longitude,
+          spot.lat,
+          spot.lng
+        );
+        return { ...spot, distance, proximity: getProximity(distance) };
+      }
+      return { ...spot, distance: null, proximity: null };
+    });
+  }, [spots, geolocation.latitude, geolocation.longitude]);
 
   // Show toast for geolocation errors with specific messaging
   useEffect(() => {
@@ -187,9 +190,10 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Spot Detail Modal */}
+      {/* Spot Detail Modal - pass existing spot data to avoid redundant fetch */}
       <SpotDetailModal
         spotId={selectedSpotId}
+        initialSpot={selectedSpotId ? spotsWithDistance.find(s => s.id === selectedSpotId) ?? null : null}
         isOpen={selectedSpotId !== null}
         onClose={() => setSelectedSpotId(null)}
         userLocation={

@@ -40,26 +40,34 @@ const TIER_CONFIG: Record<string, { label: string; color: string; bgColor: strin
 
 interface SpotDetailModalProps {
   spotId: number | null;
+  /** Pass spot data directly to avoid redundant API fetch */
+  initialSpot?: Spot | null;
   isOpen: boolean;
   onClose: () => void;
   userLocation?: { lat: number; lng: number } | null;
 }
 
-export function SpotDetailModal({ spotId, isOpen, onClose, userLocation }: SpotDetailModalProps) {
+export function SpotDetailModal({ spotId, initialSpot, isOpen, onClose, userLocation }: SpotDetailModalProps) {
   const { toast } = useToast();
   const [userRating, setUserRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
 
-  // Fetch spot details
-  const { data: spot, isLoading, error } = useQuery<Spot>({
+  // Only fetch if we don't have the spot data passed in
+  // This eliminates the redundant round-trip when parent already has the data
+  const { data: fetchedSpot, isLoading, error } = useQuery<Spot>({
     queryKey: ['/api/spots', spotId],
     queryFn: async () => {
       if (!spotId) throw new Error('No spot ID');
       const response = await apiRequest('GET', `/api/spots/${spotId}`);
       return response.json();
     },
-    enabled: isOpen && spotId !== null,
+    enabled: isOpen && spotId !== null && !initialSpot,
+    // Use initialSpot as initial data if available
+    initialData: initialSpot ?? undefined,
   });
+
+  // Use passed spot or fetched spot
+  const spot = initialSpot ?? fetchedSpot;
 
   // Check-in mutation
   const checkInMutation = useMutation({
