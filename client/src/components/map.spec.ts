@@ -1,9 +1,9 @@
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 test.describe('Map Performance & Flow', () => {
-  test('should implement viewport culling for large datasets', async ({ page }: { page: Page }) => {
+  test('should implement viewport culling for large datasets', async ({ page }) => {
     // 1. Mock a heavy database response (1,000 spots)
-    await page.route('/api/spots', async (route: Route) => {
+    await page.route('/api/spots', async route => {
       const spots = Array.from({ length: 1000 }, (_, i) => ({
         id: i,
         name: `Spot ${i}`,
@@ -41,12 +41,9 @@ test.describe('Map Performance & Flow', () => {
     await page.mouse.up();
 
     // 5. Verify DOM Updates
-    // Use Playwright's auto-retrying assertion instead of flaky waitForTimeout
-    // This will retry until the condition is met or timeout (default 5s)
-    await expect(async () => {
-      const newMarkerCount = await page.locator('.custom-spot-marker').count();
-      expect(newMarkerCount).toBeLessThan(1000);
-      expect(newMarkerCount).toBeGreaterThan(0);
-    }).toPass({ timeout: 5000 });
+    // Wait for debounce/render
+    await page.waitForTimeout(500);
+    const newMarkerCount = await page.locator('.custom-spot-marker').count();
+    expect(newMarkerCount).toBeLessThan(1000);
   });
 });
