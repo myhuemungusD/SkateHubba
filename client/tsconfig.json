@@ -6,12 +6,12 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "baseUrl": "..",
+    "baseUrl": ".",
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"],
-      "@shared": ["./shared/index"]
+      "@/*": ["src/*"],
+      "@shared/*": ["../shared/*"],
+      "@shared": ["../shared/index"]
     },
     "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo"
   },
