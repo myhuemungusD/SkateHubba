@@ -9,6 +9,7 @@ import compression from 'compression';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import csurf from 'csurf';
 import logger from './logger.ts';
 import { ensureCsrfToken } from './middleware/csrf.ts';
 import { apiLimiter } from './middleware/security.ts';
@@ -60,10 +61,13 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-app.use(ensureCsrfToken);
 
-// Global rate limiting for all API routes
-app.use('/api', apiLimiter);
+// CSRF protection: ensure token is available and validated for API routes
+app.use(ensureCsrfToken);
+const csrfProtection = csurf({ cookie: false });
+
+// Global rate limiting and CSRF protection for all API routes
+app.use('/api', apiLimiter, csrfProtection);
 
 // Register all API routes
 await registerRoutes(app);
