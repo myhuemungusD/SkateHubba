@@ -1,7 +1,8 @@
 {
   "version": 2,
   "framework": "vite",
-  "buildCommand": "cd client && pnpm install && pnpm run build",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm -C client run build",
   "outputDirectory": "dist/public",
   "rewrites": [
     {
