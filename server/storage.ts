@@ -9,8 +9,8 @@ export interface IStorage {
   getUser(id: number): Promise<StoredUser | undefined>;
   getUserByUsername(username: string): Promise<StoredUser | undefined>;
   createUser(user: InsertUser): Promise<StoredUser>;
-  // The Spot methods must match exactly
-  createSpot(spot: InsertSpot & { createdBy: number }): Promise<Spot>;
+  // Spot methods - createdBy is a string (UUID from auth)
+  createSpot(spot: InsertSpot & { createdBy: string | null }): Promise<Spot>;
   getAllSpots(): Promise<Spot[]>;
 }
 
@@ -44,14 +44,31 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async createSpot(insertSpot: InsertSpot & { createdBy: string }): Promise<Spot> {
+  async createSpot(insertSpot: InsertSpot & { createdBy: string | null }): Promise<Spot> {
     const id = this.currentSpotId++;
+    const now = new Date();
     const spot: Spot = {
-      ...insertSpot,
       id,
+      name: insertSpot.name,
+      description: insertSpot.description ?? null,
+      spotType: insertSpot.spotType ?? 'street',
+      tier: insertSpot.tier ?? 'bronze',
+      lat: insertSpot.lat,
+      lng: insertSpot.lng,
+      address: insertSpot.address ?? null,
+      city: insertSpot.city ?? null,
+      state: insertSpot.state ?? null,
+      country: insertSpot.country ?? 'USA',
+      photoUrl: insertSpot.photoUrl,
+      thumbnailUrl: null,
       createdBy: insertSpot.createdBy,
+      createdAt: now,
+      updatedAt: now,
       verified: false,
-      createdAt: new Date(),
+      isActive: true,
+      checkInCount: 0,
+      rating: 0,
+      ratingCount: 0,
     };
     this.spots.set(id, spot);
     return spot;
