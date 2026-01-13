@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState, memo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -14,10 +14,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   shadowUrl: markerShadow,
 });
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface Spot {
   id: number;
@@ -43,40 +39,19 @@ interface SpotMapProps {
   onMapClick?: (lat: number, lng: number) => void;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
-export function SpotMap({ 
-  spots, 
-  userLocation, 
-  selectedSpotId, 
-  onSelectSpot, 
-  addSpotMode = false, 
-  onMapClick 
-}: SpotMapProps) {
-  // ---------------------------------------------------------------------------
-  // Refs
-  // ---------------------------------------------------------------------------
+export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpotId, onSelectSpot, addSpotMode = false, onMapClick }: SpotMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const spotMarkersRef = useRef<Map<number, L.Marker>>(new Map());
+  const markerProximityRef = useRef<Map<number, string>>(new Map()); // Track state to prevent redundant DOM updates
   const userMarkerRef = useRef<L.Marker | null>(null);
   const accuracyCircleRef = useRef<L.Circle | null>(null);
-  const hasCenteredRef = useRef(false);
+  const hasCenteredRef = useRef(false); // Track if we've centered on user location
   const tempMarkerRef = useRef<L.Marker | null>(null);
-  
-  // FLYWEIGHT PATTERN: Track marker proximity state to avoid redundant DOM updates
-  // Only update the icon when the visual state actually changes
-  const markerProximityRef = useRef<Map<number, string>>(new Map());
+  const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
 
-  // ---------------------------------------------------------------------------
-  // Memoized Icons (Flyweight Pattern)
-  // ---------------------------------------------------------------------------
-  
-  // CRITICAL: Create icons ONCE. Don't allocate 1000 objects every render frame.
-  // Before: Every GPS update → 1000 new L.divIcon allocations → GC pressure → jank
-  // After: 4 cached icons, reused forever
+  // ELON AUDIT FIX: Flyweight Pattern
+  // Create icons ONCE. Don't allocate 1000 objects every render frame.
   const icons = useMemo(() => {
     const createIcon = (colorClass: string) => L.divIcon({
       html: `
@@ -103,34 +78,20 @@ export function SpotMap({
     };
   }, []);
 
-  // User location icon (also cached)
-  const userIcon = useMemo(() => L.divIcon({
-    html: `
-      <div class="relative">
-        <div class="w-10 h-10 rounded-full bg-blue-500 ring-4 ring-blue-500/30 flex items-center justify-center shadow-lg animate-pulse">
-          <div class="w-3 h-3 rounded-full bg-white"></div>
-        </div>
-      </div>
-    `,
-    className: 'custom-user-marker',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-  }), []);
-
-  // ---------------------------------------------------------------------------
-  // Map Initialization (runs once)
-  // ---------------------------------------------------------------------------
+  // Initialize map ONCE on mount
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     try {
+      // Create map instance with default view
       const map = L.map(mapContainerRef.current, {
-        center: userLocation ? [userLocation.lat, userLocation.lng] : [40.7589, -73.9851],
+        center: userLocation ? [userLocation.lat, userLocation.lng] : [40.7589, -73.9851], // NYC default
         zoom: userLocation ? 15 : 12,
         scrollWheelZoom: true,
         zoomControl: true,
       });
 
+      // Add tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
@@ -138,7 +99,11 @@ export function SpotMap({
 
       mapInstanceRef.current = map;
 
-      // Fix for map not rendering correctly in flexbox
+      // ELON AUDIT FIX: Viewport Culling
+      // Only render what the user can see.
+      map.on('moveend', () => setBounds(map.getBounds()));
+      setBounds(map.getBounds());
+
       setTimeout(() => {
         map.invalidateSize();
       }, 100);
@@ -146,7 +111,7 @@ export function SpotMap({
       console.error('Failed to initialize map:', error);
     }
 
-    // Cleanup on unmount
+    // Cleanup only on unmount
     return () => {
       spotMarkersRef.current.forEach(marker => marker.remove());
       spotMarkersRef.current.clear();
@@ -167,19 +132,25 @@ export function SpotMap({
         mapInstanceRef.current = null;
       }
     };
-  }, []); // Empty deps - only run once
+  }, []); // Empty dependency array - only run once
 
-  // ---------------------------------------------------------------------------
-  // Spot Markers (with state diffing)
-  // ---------------------------------------------------------------------------
+  // ELON AUDIT FIX: Filter spots to viewport
+  // This reduces DOM nodes from N (total spots) to n (visible spots)
+  const visibleSpots = useMemo(() => {
+    if (!bounds) return [];
+    // Add 20% buffer so markers don't "pop" in at the very edge
+    const paddedBounds = bounds.pad(0.2);
+    return spots.filter(spot => paddedBounds.contains([spot.lat, spot.lng]));
+  }, [spots, bounds]);
+
+  // Update spot markers when VISIBLE spots change
   useEffect(() => {
     if (!mapInstanceRef.current) return;
+
     const map = mapInstanceRef.current;
-
-    // Build set of current spot IDs for O(1) lookup
-    const currentSpotIds = new Set(spots.map(s => s.id));
-
-    // Remove markers for spots that no longer exist
+    
+    // Remove markers that no longer exist
+    const currentSpotIds = new Set(visibleSpots.map(s => s.id));
     spotMarkersRef.current.forEach((marker, id) => {
       if (!currentSpotIds.has(id)) {
         marker.remove();
@@ -188,52 +159,63 @@ export function SpotMap({
       }
     });
 
-    // Add or update markers
-    spots.forEach(spot => {
-      const marker = spotMarkersRef.current.get(spot.id);
+    // Add or update spot markers
+    visibleSpots.forEach(spot => {
+      let marker = spotMarkersRef.current.get(spot.id);
       
       // Determine which cached icon to use
       const proximityKey = spot.proximity || 'default';
-      const icon = icons[proximityKey as keyof typeof icons] || icons.default;
+      // @ts-expect-error -- keys are safe based on proximity types
+      const icon = icons[proximityKey] || icons.default;
       
-      // STATE DIFFING: Check if visual state actually changed
-      const previousProximity = markerProximityRef.current.get(spot.id);
-      const needsIconUpdate = previousProximity !== proximityKey;
+      // Check if visual state actually changed
+      const currentProximity = markerProximityRef.current.get(spot.id);
+      const needsIconUpdate = currentProximity !== proximityKey;
 
       if (!marker) {
-        // CREATE: New marker
-        const newMarker = L.marker([spot.lat, spot.lng], { icon })
+        // Create new marker
+        marker = L.marker([spot.lat, spot.lng], { icon })
           .addTo(map)
           .on('click', () => onSelectSpot(spot.id));
         
-        newMarker.bindPopup(`<div class="font-semibold">${spot.name}</div>`);
-        spotMarkersRef.current.set(spot.id, newMarker);
+        marker.bindPopup(`<div class="font-semibold">${spot.name}</div>`);
+        spotMarkersRef.current.set(spot.id, marker);
         markerProximityRef.current.set(spot.id, proximityKey);
       } else {
-        // UPDATE: Existing marker
-        // Position update is cheap (just lat/lng change)
+        // Update position (cheap)
         marker.setLatLng([spot.lat, spot.lng]);
         
-        // Icon update is EXPENSIVE (DOM manipulation)
-        // Only do it when proximity actually changed
+        // Update icon ONLY if changed (expensive DOM op)
         if (needsIconUpdate) {
           marker.setIcon(icon);
           markerProximityRef.current.set(spot.id, proximityKey);
         }
       }
     });
-  }, [spots, onSelectSpot, icons]);
+  }, [visibleSpots, onSelectSpot, icons]);
 
-  // ---------------------------------------------------------------------------
-  // User Location Marker
-  // ---------------------------------------------------------------------------
+  // Update user location marker
   useEffect(() => {
     if (!mapInstanceRef.current) return;
+
     const map = mapInstanceRef.current;
 
     if (userLocation) {
       // Create or update user marker
       if (!userMarkerRef.current) {
+        const userIcon = L.divIcon({
+          html: `
+            <div class="relative">
+              <div class="w-10 h-10 rounded-full bg-blue-500 ring-4 ring-blue-500/30 flex items-center justify-center shadow-lg animate-pulse">
+                <div class="w-3 h-3 rounded-full bg-white"></div>
+              </div>
+            </div>
+          `,
+          className: 'custom-user-marker',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+        });
+
         userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
           .addTo(map)
           .bindPopup('<div class="font-semibold">You are here</div>');
@@ -241,7 +223,7 @@ export function SpotMap({
         userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
       }
 
-      // Accuracy circle (30m minimum for check-in visualization)
+      // Create or update accuracy circle (30m check-in radius)
       if (!accuracyCircleRef.current && userLocation.accuracy) {
         accuracyCircleRef.current = L.circle([userLocation.lat, userLocation.lng], {
           radius: Math.max(30, userLocation.accuracy),
@@ -257,13 +239,12 @@ export function SpotMap({
         }
       }
 
-      // Center map on first location acquisition
       if (!hasCenteredRef.current) {
         map.setView([userLocation.lat, userLocation.lng], 15);
         hasCenteredRef.current = true;
       }
     } else {
-      // Remove markers when location is lost
+      // Remove user marker if no location
       if (userMarkerRef.current) {
         userMarkerRef.current.remove();
         userMarkerRef.current = null;
@@ -273,24 +254,22 @@ export function SpotMap({
         accuracyCircleRef.current = null;
       }
     }
-  }, [userLocation, userIcon]);
+  }, [userLocation]);
 
-  // ---------------------------------------------------------------------------
-  // Selected Spot Highlight
-  // ---------------------------------------------------------------------------
+  // Highlight selected spot
   useEffect(() => {
-    if (!mapInstanceRef.current || selectedSpotId === null) return;
+    if (!mapInstanceRef.current) return;
 
-    const marker = spotMarkersRef.current.get(selectedSpotId);
-    if (marker) {
-      marker.openPopup();
-      mapInstanceRef.current.panTo(marker.getLatLng());
-    }
+    spotMarkersRef.current.forEach((marker, id) => {
+      if (id === selectedSpotId) {
+        marker.openPopup();
+        // Optionally pan to selected marker
+        mapInstanceRef.current?.panTo(marker.getLatLng());
+      }
+    });
   }, [selectedSpotId]);
 
-  // ---------------------------------------------------------------------------
-  // Add Spot Mode (click to place pin)
-  // ---------------------------------------------------------------------------
+  // Handle add spot mode - allow clicking on map to place pin
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
@@ -330,7 +309,7 @@ export function SpotMap({
       map.off('click', handleMapClick);
       map.getContainer().style.cursor = '';
       
-      // Clean up temp marker when exiting add mode
+      // Remove temp marker when exiting add mode
       if (tempMarkerRef.current) {
         tempMarkerRef.current.remove();
         tempMarkerRef.current = null;
@@ -342,17 +321,12 @@ export function SpotMap({
     };
   }, [addSpotMode, onMapClick]);
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
   return (
     <div 
       ref={mapContainerRef} 
       className="w-full h-full bg-gray-900"
       style={{ minHeight: '100%' }}
       data-testid="map-container"
-      role="application"
-      aria-label="Interactive map showing skate spots"
     />
   );
-}
+});

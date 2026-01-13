@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuthRoutes } from "./auth/routes";
+import { authenticateUser } from "./auth/middleware";
 import { spotStorage } from "./storage/spots";
 import { insertSpotSchema } from "@shared/schema";
 import { publicWriteLimiter } from "./middleware/security";
@@ -9,7 +10,7 @@ import logger from "./logger";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // 1. Setup Authentication (Passport session)
-  setupAuth(app);
+  setupAuthRoutes(app);
 
   // 2. Spot Endpoints
 
@@ -64,10 +65,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/spots - Create a new spot
-  app.post("/api/spots", publicWriteLimiter, requireCsrfToken, async (req, res) => {
+  app.post("/api/spots", authenticateUser, publicWriteLimiter, requireCsrfToken, async (req, res) => {
     try {
       // Basic Auth Check: Ensure we have a user ID to bind the spot to
-      if (!req.isAuthenticated()) {
+      if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in to create a spot" });
       }
 
@@ -83,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Creation: Pass 'createdBy' from the authenticated session
       const spot = await spotStorage.createSpot({
         ...result.data,
-        createdBy: req.user.id,
+        createdBy: req.currentUser.id,
       });
 
       res.status(201).json(spot);
@@ -94,9 +95,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PUT /api/spots/:id - Update a spot
-  app.put("/api/spots/:id", publicWriteLimiter, requireCsrfToken, async (req, res) => {
+  app.put("/api/spots/:id", authenticateUser, publicWriteLimiter, requireCsrfToken, async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in to update a spot" });
       }
 
@@ -110,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!existingSpot) {
         return res.status(404).json({ message: "Spot not found" });
       }
-      if (existingSpot.createdBy !== req.user.id) {
+      if (existingSpot.createdBy !== req.currentUser.id) {
         return res.status(403).json({ message: "You can only edit your own spots" });
       }
 
@@ -131,9 +132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/spots/:id - Delete a spot (soft delete)
-  app.delete("/api/spots/:id", publicWriteLimiter, requireCsrfToken, async (req, res) => {
+  app.delete("/api/spots/:id", authenticateUser, publicWriteLimiter, requireCsrfToken, async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in to delete a spot" });
       }
 
@@ -147,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!existingSpot) {
         return res.status(404).json({ message: "Spot not found" });
       }
-      if (existingSpot.createdBy !== req.user.id) {
+      if (existingSpot.createdBy !== req.currentUser.id) {
         return res.status(403).json({ message: "You can only delete your own spots" });
       }
 
@@ -160,9 +161,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/spots/:id/checkin - Check in at a spot
-  app.post("/api/spots/:id/checkin", publicWriteLimiter, async (req, res) => {
+  app.post("/api/spots/:id/checkin", authenticateUser, publicWriteLimiter, async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in to check in" });
       }
 
@@ -185,9 +186,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/spots/:id/rate - Rate a spot
-  app.post("/api/spots/:id/rate", publicWriteLimiter, async (req, res) => {
+  app.post("/api/spots/:id/rate", authenticateUser, publicWriteLimiter, async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in to rate" });
       }
 
@@ -215,13 +216,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/spots/user/me - Get current user's spots
-  app.get("/api/spots/user/me", async (req, res) => {
+  app.get("/api/spots/user/me", authenticateUser, async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in" });
       }
 
-      const spots = await spotStorage.getSpotsByUser(req.user.id);
+      const spots = await spotStorage.getSpotsByUser(req.currentUser.id);
       res.json(spots);
     } catch (error) {
       logger.error('Failed to fetch user spots', { error: error instanceof Error ? error.message : String(error) });
