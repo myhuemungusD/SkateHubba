@@ -10,7 +10,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import logger from './logger.ts';
-import { ensureCsrfToken } from './middleware/csrf.ts';
+import { ensureCsrfToken, requireCsrfToken } from './middleware/csrf.ts';
 import { apiLimiter } from './middleware/security.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -59,11 +59,18 @@ app.use(compression());
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parsing with CSRF protection (double-submit cookie pattern)
+// ensureCsrfToken: sets token in cookie for all requests
+// requireCsrfToken: validates token header matches cookie on mutating requests
 app.use(cookieParser());
 app.use(ensureCsrfToken);
 
 // Global rate limiting for all API routes
 app.use('/api', apiLimiter);
+
+// Global CSRF validation for all mutating API requests
+app.use('/api', requireCsrfToken);
 
 // Register all API routes
 await registerRoutes(app);

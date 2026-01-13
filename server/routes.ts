@@ -5,8 +5,9 @@ import { authenticateUser } from "./auth/middleware";
 import { spotStorage } from "./storage/spots";
 import { insertSpotSchema } from "@shared/schema";
 import { publicWriteLimiter } from "./middleware/security";
-import { requireCsrfToken } from "./middleware/csrf";
 import logger from "./logger";
+
+// Note: CSRF protection is applied globally in index.ts via requireCsrfToken middleware
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // 1. Setup Authentication (Passport session)
@@ -65,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/spots - Create a new spot
-  app.post("/api/spots", authenticateUser, publicWriteLimiter, requireCsrfToken, async (req, res) => {
+  app.post("/api/spots", authenticateUser, publicWriteLimiter, async (req, res) => {
     try {
       // Basic Auth Check: Ensure we have a user ID to bind the spot to
       if (!req.currentUser) {
@@ -95,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PUT /api/spots/:id - Update a spot
-  app.put("/api/spots/:id", authenticateUser, publicWriteLimiter, requireCsrfToken, async (req, res) => {
+  app.put("/api/spots/:id", authenticateUser, publicWriteLimiter, async (req, res) => {
     try {
       if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in to update a spot" });
@@ -132,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/spots/:id - Delete a spot (soft delete)
-  app.delete("/api/spots/:id", authenticateUser, publicWriteLimiter, requireCsrfToken, async (req, res) => {
+  app.delete("/api/spots/:id", authenticateUser, publicWriteLimiter, async (req, res) => {
     try {
       if (!req.currentUser) {
         return res.status(401).json({ message: "You must be logged in to delete a spot" });
