@@ -15,7 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 2. Spot Endpoints
   app.get("/api/spots", async (_req, res) => {
-    const spots = await storage.getAllSpots();
+    const spots = await spotStorage.getAllSpots();
     res.json(spots);
   });
 
@@ -32,9 +32,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Creation: Pass 'createdBy' from the authenticated session
-    const spot = await storage.createSpot({
+    const spot = await spotStorage.createSpot({
       ...result.data,
-      createdBy: req.user.id,
+      createdBy: req.currentUser?.id || "",
     });
 
     res.status(201).json(spot);
