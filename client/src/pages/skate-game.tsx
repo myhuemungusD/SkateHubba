@@ -1,3 +1,4 @@
+right branch it belongs in 
 import { useMemo, useState } from "react";
 import { Crown, Flag, Shield, Swords } from "lucide-react";
 import MobileLayout from "../components/layout/MobileLayout";
