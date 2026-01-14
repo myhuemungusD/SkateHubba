@@ -42,8 +42,21 @@ function getFirebaseConfig(): FirebaseConfig | null {
   const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
   
-  if (!apiKey || !projectId) {
+  // Debug logging for production issues (won't expose full key)
+  if (!apiKey) {
+    console.error('[Firebase] VITE_FIREBASE_API_KEY is not set');
     return null;
+  }
+  
+  if (!projectId) {
+    console.error('[Firebase] VITE_FIREBASE_PROJECT_ID is not set');
+    return null;
+  }
+  
+  // Log partial key for debugging (first 8 chars only)
+  if (import.meta.env.DEV) {
+    console.log('[Firebase] Config loaded, API key starts with:', apiKey.substring(0, 8) + '...');
+    console.log('[Firebase] Project ID:', projectId);
   }
   
   return {
