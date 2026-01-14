@@ -75,7 +75,7 @@ export function useSkateGame(gameId: string | null) {
 
       return { previousGame };
     },
-    onError: (err, _newMove, context) => {
+    onError: (_error, _newMove, context) => {
       toast({
         title: "Foul!",
         description: "Could not sync your move. Retrying...",
