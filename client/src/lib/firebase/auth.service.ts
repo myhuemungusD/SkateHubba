@@ -29,7 +29,7 @@ import {
   User as FirebaseUser,
   Unsubscribe,
 } from 'firebase/auth';
-import { auth as getAuth } from './config';
+import { auth } from './config';
 import { AuthUser, AuthError, AuthErrorCode } from './auth.types';
 import { toAuthUser } from './auth.types';
 
@@ -85,8 +85,7 @@ export async function signUpWithEmail(
   email: string,
   password: string,
   profile?: { firstName?: string; lastName?: string }
-): Promise<AuthUser> {
-  const auth = getAuth();
+): Promise<AuthUser> {
   console.log('[AuthService] signUpWithEmail called with:', { email, profile });
   console.log('[AuthService] Auth instance:', auth ? 'exists' : 'NULL');
   
@@ -126,8 +125,7 @@ export async function signUpWithEmail(
 export async function signInWithEmail(
   email: string,
   password: string
-): Promise<AuthUser> {
-  const auth = getAuth();
+): Promise<AuthUser> {
   console.log('[AuthService] Attempting sign in for:', email);
   try {
     const credential = await signInWithEmailAndPassword(auth, email, password);
@@ -162,8 +160,7 @@ function isMobileDevice(): boolean {
  * @returns The authenticated user, or null if redirect was triggered
  * @throws AuthError if sign-in fails
  */
-export async function signInWithGoogle(): Promise<AuthUser | null> {
-  const auth = getAuth();
+export async function signInWithGoogle(): Promise<AuthUser | null> {
   console.log('[AuthService] signInWithGoogle called');
   console.log('[AuthService] Auth instance:', auth);
   console.log('[AuthService] Is mobile:', isMobileDevice());
@@ -209,8 +206,7 @@ export async function signInWithGoogle(): Promise<AuthUser | null> {
  * 
  * @returns The authenticated user if redirect succeeded, null otherwise
  */
-export async function getGoogleRedirectResult(): Promise<AuthUser | null> {
-  const auth = getAuth();
+export async function getGoogleRedirectResult(): Promise<AuthUser | null> {
   try {
     const result = await getRedirectResult(auth);
     return result ? toAuthUser(result.user) : null;
@@ -225,8 +221,7 @@ export async function getGoogleRedirectResult(): Promise<AuthUser | null> {
  * @returns The authenticated anonymous user
  * @throws AuthError if sign-in fails
  */
-export async function signInAnonymously(): Promise<AuthUser> {
-  const auth = getAuth();
+export async function signInAnonymously(): Promise<AuthUser> {
   try {
     const result = await firebaseSignInAnonymously(auth);
     return toAuthUser(result.user);
@@ -244,8 +239,7 @@ export async function signInAnonymously(): Promise<AuthUser> {
  * 
  * @throws AuthError if sign-out fails
  */
-export async function signOutUser(): Promise<void> {
-  const auth = getAuth();
+export async function signOutUser(): Promise<void> {
   try {
     await firebaseSignOut(auth);
   } catch (error) {
@@ -261,8 +255,7 @@ export async function signOutUser(): Promise<void> {
  */
 export function onAuthStateChange(
   callback: (user: AuthUser | null) => void
-): Unsubscribe {
-  const auth = getAuth();
+): Unsubscribe {
   return onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
     callback(firebaseUser ? toAuthUser(firebaseUser) : null);
   });
@@ -273,8 +266,7 @@ export function onAuthStateChange(
  * 
  * @returns Current user or null if not authenticated
  */
-export function getCurrentUser(): AuthUser | null {
-  const auth = getAuth();
+export function getCurrentUser(): AuthUser | null {
   return auth.currentUser ? toAuthUser(auth.currentUser) : null;
 }
 
@@ -284,8 +276,7 @@ export function getCurrentUser(): AuthUser | null {
  * @param email - User's email address
  * @throws AuthError if sending fails
  */
-export async function resetPassword(email: string): Promise<void> {
-  const auth = getAuth();
+export async function resetPassword(email: string): Promise<void> {
   try {
     await sendPasswordResetEmail(auth, email);
   } catch (error) {
@@ -298,8 +289,7 @@ export async function resetPassword(email: string): Promise<void> {
  * 
  * @throws AuthError if sending fails
  */
-export async function resendVerificationEmail(): Promise<void> {
-  const auth = getAuth();
+export async function resendVerificationEmail(): Promise<void> {
   try {
     const user = auth.currentUser;
     if (!user) {
