@@ -2,7 +2,6 @@ import type { Express } from 'express';
 import { AuthService } from './service.ts';
 import { authenticateUser } from './middleware.ts';
 import { authLimiter } from '../middleware/rateLimit.ts';
-import { passwordResetLimiter } from '../middleware/security.ts';
 import { requireCsrfToken } from '../middleware/csrf.ts';
 import { admin } from '../admin.ts';
 
