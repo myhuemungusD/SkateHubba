@@ -39,8 +39,14 @@ try {
   process.exit(1);
 }
 
-// 2. Configuration - UPDATE THIS WITH YOUR EMAIL
-const TARGET_EMAIL = process.env.ADMIN_EMAIL || "jason@designmainline.com";
+// 2. Configuration - require ADMIN_EMAIL to be set
+const TARGET_EMAIL = process.env.ADMIN_EMAIL;
+
+if (!TARGET_EMAIL) {
+  console.error('❌ ERROR: ADMIN_EMAIL environment variable is not set.');
+  console.error('   Please set ADMIN_EMAIL to the email of the user to grant admin access.');
+  process.exit(1);
+}
 const ROLES: string[] = ['admin', 'verified_pro'];
 
 // Simple email validation
