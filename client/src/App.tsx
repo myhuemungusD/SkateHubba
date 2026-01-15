@@ -28,6 +28,7 @@ import ProtectedRoute, { type Params } from "./lib/protected-route";
 const Landing = lazy(() => import("./pages/landing"));
 const NewLanding = lazy(() => import("./pages/new-landing"));
 const Home = lazy(() => import("./pages/home"));
+const FeedPage = lazy(() => import("./pages/feed"));
 const Tutorial = lazy(() => import("./pages/tutorial"));
 const Demo = lazy(() => import("./pages/demo"));
 const DonationPage = lazy(() => import("./pages/donate"));
@@ -58,6 +59,7 @@ const CheckinsPage = lazy(() => import("./pages/checkins"));
 const PublicProfileView = lazy(() => import("./features/social/public-profile/PublicProfileView"));
 const BoltsShowcase = lazy(() => import("./features/social/bolts-showcase/BoltsShowcase"));
 
+
 function RootRedirect() {
   const [, setLocation] = useLocation();
 
@@ -71,7 +73,7 @@ function RootRedirect() {
 function DashboardFeedRoute(_props: { params: Params }) {
   return (
     <DashboardLayout>
-      <Home />
+      <FeedPage />
     </DashboardLayout>
   );
 }

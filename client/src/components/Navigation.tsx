@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "./ui/button";
 import { Home, ShoppingCart, LogIn, User, Package, Map, Trophy, Search, Gamepad2, Menu, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthProvider";
+import { useShowNavigation } from "../context/LayoutContext";
 import CartDrawer from "./cart/CartDrawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { ProfileSearch } from "./search/ProfileSearch";
@@ -17,12 +18,18 @@ import {
 
 export default function Navigation() {
   const [location, setLocation] = useLocation();
+  const showNav = useShowNavigation();
   const auth = useAuth();
   const isAuthenticated = auth?.isAuthenticated ?? false;
   const user = auth?.user ?? null;
   const profile = auth?.profile ?? null;
   const signOut = auth?.signOut;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Don't render if inside DashboardLayout (it provides its own nav)
+  if (!showNav) {
+    return null;
+  }
 
   const handleLogout = useCallback(async () => {
     try {
