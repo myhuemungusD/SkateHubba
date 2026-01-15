@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { SiGoogle } from "react-icons/si";
-import { UserCircle, ExternalLink } from "lucide-react";
+import { UserCircle, Copy, Check } from "lucide-react";
 import { useAuth } from "../context/AuthProvider";
 import { trackEvent } from "../lib/analytics";
 import { Button } from "../components/ui/button";
@@ -38,10 +38,14 @@ export default function LoginPage() {
   const [isAnonymousLoading, setIsAnonymousLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Default to staying signed in
   const [inEmbeddedBrowser, setInEmbeddedBrowser] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Check for embedded browser on mount
   useEffect(() => {
-    setInEmbeddedBrowser(isEmbeddedBrowser());
+    const isEmbedded = isEmbeddedBrowser();
+    setInEmbeddedBrowser(isEmbedded);
+    console.log('[Login] User agent:', navigator.userAgent);
+    console.log('[Login] Is embedded browser:', isEmbedded);
   }, []);
 
   // Redirect when authenticated
@@ -138,20 +142,37 @@ export default function LoginPage() {
                   <strong>Google Sign-In not available</strong> in this browser.
                   <br />
                   <span className="text-yellow-300/80">
-                    Tap the menu (•••) and select "Open in Browser" or use Guest sign-in below.
+                    Copy the link below and paste in Safari/Chrome, or use Guest sign-in.
                   </span>
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full mt-2 border-yellow-600 text-yellow-200 hover:bg-yellow-900/50"
-                  onClick={() => {
-                    // Try to open in system browser
-                    window.open(window.location.href, '_system');
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(window.location.href);
+                      setCopied(true);
+                      toast({
+                        title: "Link copied!",
+                        description: "Paste it in Safari or Chrome to sign in with Google."
+                      });
+                      setTimeout(() => setCopied(false), 2000);
+                    } catch {
+                      // Fallback for browsers that don't support clipboard API
+                      toast({
+                        title: "Copy this link",
+                        description: window.location.href
+                      });
+                    }
                   }}
                 >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Open in Browser
+                  {copied ? (
+                    <Check className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Copy className="w-4 h-4 mr-2" />
+                  )}
+                  {copied ? "Copied!" : "Copy Link"}
                 </Button>
               </div>
             )}

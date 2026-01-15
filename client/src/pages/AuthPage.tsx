@@ -12,7 +12,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useLocation } from 'wouter';
-import { Eye, EyeOff, Mail, User, Lock, Loader2, ExternalLink } from 'lucide-react';
+import { Eye, EyeOff, Mail, User, Lock, Loader2, Copy, Check } from 'lucide-react';
 import { SiGoogle } from 'react-icons/si';
 
 import { Button } from '../components/ui/button';
@@ -85,10 +85,14 @@ export default function AuthPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Default to staying signed in
   const [inEmbeddedBrowser, setInEmbeddedBrowser] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Check for embedded browser on mount
   useEffect(() => {
-    setInEmbeddedBrowser(isEmbeddedBrowser());
+    const isEmbedded = isEmbeddedBrowser();
+    setInEmbeddedBrowser(isEmbedded);
+    console.log('[AuthPage] User agent:', navigator.userAgent);
+    console.log('[AuthPage] Is embedded browser:', isEmbedded);
   }, []);
   
   // Handle case where auth context is not available yet
@@ -374,17 +378,26 @@ export default function AuthPage() {
                       <strong>Google Sign-In not available</strong> in this browser.
                       <br />
                       <span className="text-yellow-300/80">
-                        Tap the menu (•••) and select "Open in Browser" or use email sign-in above.
+                        Copy the link below and paste in Safari/Chrome, or use email sign-in above.
                       </span>
                     </p>
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full mt-2 border-yellow-600 text-yellow-200 hover:bg-yellow-900/50"
-                      onClick={() => window.open(window.location.href, '_system')}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(window.location.href);
+                          setCopied(true);
+                          toast({ title: "Link copied!", description: "Paste it in Safari or Chrome." });
+                          setTimeout(() => setCopied(false), 2000);
+                        } catch {
+                          toast({ title: "Copy this link", description: window.location.href });
+                        }
+                      }}
                     >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Open in Browser
+                      {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                      {copied ? "Copied!" : "Copy Link"}
                     </Button>
                   </div>
                 )}
@@ -538,17 +551,26 @@ export default function AuthPage() {
                       <strong>Google Sign-In not available</strong> in this browser.
                       <br />
                       <span className="text-yellow-300/80">
-                        Tap the menu (•••) and select "Open in Browser" or use email sign-up above.
+                        Copy the link below and paste in Safari/Chrome, or use email sign-up above.
                       </span>
                     </p>
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full mt-2 border-yellow-600 text-yellow-200 hover:bg-yellow-900/50"
-                      onClick={() => window.open(window.location.href, '_system')}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(window.location.href);
+                          setCopied(true);
+                          toast({ title: "Link copied!", description: "Paste it in Safari or Chrome." });
+                          setTimeout(() => setCopied(false), 2000);
+                        } catch {
+                          toast({ title: "Copy this link", description: window.location.href });
+                        }
+                      }}
                     >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Open in Browser
+                      {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                      {copied ? "Copied!" : "Copy Link"}
                     </Button>
                   </div>
                 )}
