@@ -19,6 +19,7 @@
     "test": "turbo test",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "validate:packages": "node scripts/validate-packages.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -28,6 +29,12 @@
     ],
     "*.{json,md}": [
       "prettier --write"
+    ],
+    "package.json": [
+      "node scripts/validate-packages.mjs"
+    ],
+    "**/package.json": [
+      "node scripts/validate-packages.mjs"
     ]
   },
   "devDependencies": {

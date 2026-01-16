@@ -4,6 +4,10 @@ dist/
 *.tsbuildinfo
 client/.tsbuild/
 
+# Turbo cache (never commit)
+.turbo/
+**/.turbo/
+
 # OS
 .DS_Store
 
