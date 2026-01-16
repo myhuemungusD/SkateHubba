@@ -1,5 +1,5 @@
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
-import { db } from "../db";
+import { db, type Database } from "../db";
 import { checkIns, spots } from "@shared/schema";
 import { logServerEvent } from "./analyticsService";
 
@@ -106,7 +106,7 @@ export async function verifyAndCheckIn(
   }
 
   try {
-    const checkIn = await db.transaction(async (tx: typeof db) => {
+    const checkIn = await db.transaction(async (tx: Database) => {
       const [createdCheckIn] = await tx
         .insert(checkIns)
         .values({

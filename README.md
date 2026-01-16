@@ -7,8 +7,10 @@
 [![React](https://img.shields.io/badge/React-18.3-61dafb.svg)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![CI](https://github.com/myhuemungusD/skatehubba1/actions/workflows/ci.yml/badge.svg)](https://github.com/myhuemungusD/skatehubba1/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-85%20passing-brightgreen.svg)](./vitest.config.mts)
+[![Tests](https://img.shields.io/badge/Tests-133%20passing-brightgreen.svg)](./vitest.config.mts)
+[![Coverage](https://img.shields.io/badge/Coverage-3%25-red.svg)](./vitest.config.mts)
 [![CodeQL](https://github.com/myhuemungusD/skatehubba1/actions/workflows/codeql.yml/badge.svg)](https://github.com/myhuemungusD/skatehubba1/security/code-scanning)
+[![Security](https://img.shields.io/badge/Vulnerabilities-0-brightgreen.svg)](https://github.com/myhuemungusD/skatehubba1/security)
 
 **Owner:** Jason Hamilton  
 **Entity:** Design Mainline LLC  
@@ -35,6 +37,7 @@
 ## 🎯 Overview
 
 SkateHubba™ is a next-generation skateboarding platform that combines:
+
 - **AR Gameplay**: Geo-locked trick holograms unlocked by physical check-ins
 - **Remote S.K.A.T.E. Game**: Challenge friends to virtual games of SKATE
 - **Spot Discovery**: Interactive map with legendary skate spots worldwide
@@ -93,6 +96,7 @@ flowchart TB
 ## ✨ Features
 
 ### Core Systems
+
 - ✅ **Firebase Authentication** - Email/password, Google, and phone authentication
 - ✅ **Interactive Spot Map** - Powered by Leaflet with custom spot markers
 - ✅ **Geo-Verified Check-Ins** - 30-meter radius verification using Haversine formula
@@ -106,6 +110,7 @@ flowchart TB
 - ✅ **Beta Subscriber System** - Email collection with Resend notifications
 
 ### Security Features
+
 - Rate limiting on all API endpoints
 - XSS and SQL injection protection
 - Secure payment processing with Stripe
@@ -118,6 +123,7 @@ flowchart TB
 ## 🛠 Tech Stack
 
 ### Frontend
+
 - **React 18.3** - UI framework
 - **TypeScript 5.9** - Type safety
 - **Vite 7.1** - Build tool and dev server
@@ -130,6 +136,7 @@ flowchart TB
 - **Lucide React** - Icon library
 
 ### Backend
+
 - **Node.js 20+** - Runtime environment
 - **Express 4.21** - Web framework
 - **TypeScript** - Type safety on server
@@ -140,6 +147,7 @@ flowchart TB
 - **OpenAI API** - AI chat functionality
 
 ### Infrastructure
+
 - **Firebase** - Authentication, Firestore, Storage, FCM
 - **Neon Database** - Serverless PostgreSQL
 - **Stripe** - Payment gateway
@@ -148,9 +156,31 @@ flowchart TB
 
 ---
 
-## 🚀 Getting Started
+## � Environment Separation
+
+SkateHubba uses **enterprise-grade environment separation** with a single Firebase project:
+
+| Environment | Purpose                     | Firestore Namespace |
+| ----------- | --------------------------- | ------------------- |
+| `prod`      | Production users            | `/env/prod/...`     |
+| `staging`   | Testing & QA                | `/env/staging/...`  |
+| `local`     | Development (emulator only) | `/env/local/...`    |
+
+**Key features:**
+
+- **Runtime guardrails** - `assertEnvWiring()` fails fast on misconfigurations
+- **Visual indicators** - Yellow "STAGING" banner in non-prod environments
+- **Path namespacing** - `getEnvPath()` ensures data isolation
+- **133 tests** validating environment architecture
+
+See [docs/ENVIRONMENT_SEPARATION.md](docs/ENVIRONMENT_SEPARATION.md) for the full setup guide.
+
+---
+
+## �🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 20 or higher
 - npm or pnpm package manager
 - PostgreSQL database (local or Neon)
@@ -160,28 +190,34 @@ flowchart TB
 ### Installation
 
 1. **Clone the repository**
+
 ```bash
 git clone https://github.com/myhuemungusD/skatehubba1.git
 cd skatehubba1
 ```
 
 2. **Install dependencies**
+
 ```bash
 pnpm install
 ```
 
 3. **Set up environment variables**
+
 ```bash
 cp .env.example .env
 ```
+
 See [Environment Variables](#environment-variables) for configuration details.
 
 4. **Initialize the database**
+
 ```bash
 npm run db:push
 ```
 
 5. **Start the development server**
+
 ```bash
 npm run dev
 ```
@@ -195,11 +231,13 @@ The application will be available at `http://localhost:3001`
 ### Required Variables
 
 #### Database
+
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/database
 ```
 
 #### Firebase Configuration
+
 ```bash
 # Frontend (Vite variables)
 VITE_FIREBASE_API_KEY=your-firebase-api-key
@@ -213,6 +251,7 @@ FIREBASE_ADMIN_KEY=path-to-service-account-key.json
 ```
 
 #### Security & Authentication
+
 ```bash
 SESSION_SECRET=your-session-secret-min-32-chars
 JWT_SECRET=your-jwt-secret-key
@@ -222,29 +261,34 @@ ADMIN_API_KEY=your-admin-api-key-for-protected-endpoints
 ### Optional Variables
 
 #### Stripe Payment Processing
+
 ```bash
 STRIPE_SECRET_KEY=sk_test_or_live_key
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_or_live_key
 ```
 
 #### AI Features
+
 ```bash
 OPENAI_API_KEY=your-openai-api-key
 GOOGLE_AI_API_KEY=your-google-ai-key
 ```
 
 #### Email Notifications
+
 ```bash
 RESEND_API_KEY=your-resend-api-key
 ```
 
 #### Monitoring
+
 ```bash
 SENTRY_DSN=your-sentry-dsn
 VITE_SENTRY_DSN=your-frontend-sentry-dsn
 ```
 
 #### Production
+
 ```bash
 NODE_ENV=production
 PORT=3001
@@ -365,6 +409,7 @@ npm run deploy:rules      # Deploy security rules only
 ### Project Scripts
 
 The development server uses `tsx` to run TypeScript files directly:
+
 - Frontend served by Vite at `http://localhost:5173` (proxied through Express)
 - Backend API at `http://localhost:3001/api/*`
 - Hot module replacement (HMR) enabled for fast development
@@ -390,27 +435,32 @@ For complete API documentation, visit `/api/docs` when the server is running.
 ### Key Endpoints
 
 #### Authentication
+
 - `POST /api/auth/login` - Login with Firebase token
 - `GET /api/auth/me` - Get current user
 - `POST /api/auth/logout` - Logout and clear session
 
 #### Spots
+
 - `GET /api/spots` - List all skate spots
 - `GET /api/spots/:spotId` - Get spot details
 - `POST /api/spots/check-in` - Check in at a spot (geo-verified)
 
 #### Products & Shop
+
 - `GET /api/products` - List all products
 - `GET /api/products/:productId` - Get product details
 - `POST /api/create-shop-payment-intent` - Create payment for cart
 
 #### S.K.A.T.E. Game
+
 - `GET /api/games` - List user's games
 - `POST /api/games/create` - Create new game
 - `POST /api/games/:gameId/join` - Join a game
 - `POST /api/games/:gameId/trick` - Submit a trick
 
 #### AI & Assistance
+
 - `POST /api/ai/chat` - Chat with Hesher AI assistant
 - `POST /api/assistant` - Legacy OpenAI assistant (deprecated)
 
@@ -423,17 +473,21 @@ See the full API documentation at `/api/docs` for request/response schemas.
 ### Production Build
 
 1. **Build the application**
+
 ```bash
 npm run build
 ```
+
 This creates:
+
 - `dist/client` - Static frontend assets
 - `dist/server` - Compiled backend code
 
 2. **Set production environment variables**
-Ensure all required environment variables are set in production.
+   Ensure all required environment variables are set in production.
 
 3. **Start the server**
+
 ```bash
 NODE_ENV=production npm start
 ```
@@ -441,11 +495,13 @@ NODE_ENV=production npm start
 ### Deployment Platforms
 
 #### Replit
+
 - Project is Replit-ready with `.replit` configuration
 - Automatic deployment on push to main branch
 - Environment variables configured in Replit Secrets
 
 #### Other Platforms (Vercel, Railway, Render)
+
 1. Set environment variables in platform dashboard
 2. Configure build command: `npm run build`
 3. Configure start command: `npm start`
@@ -463,6 +519,7 @@ DATABASE_URL=<production-db-url> npm run db:push
 1. Configure Firebase Authentication methods in Firebase Console
 2. Add production domains to authorized domains
 3. Deploy Firestore rules:
+
 ```bash
 npm run deploy:firestore
 ```

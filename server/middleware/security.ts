@@ -1,31 +1,30 @@
-
-import type { Request, Response, NextFunction } from 'express';
-import rateLimit from 'express-rate-limit';
+import type { Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 
 const RATE_LIMITS = {
   // CodeQL: Missing rate limiting (auth endpoints)
   auth: {
     windowMs: 15 * 60 * 1000,
     max: 10,
-    message: 'Too many authentication attempts, please try again later.',
+    message: "Too many authentication attempts, please try again later.",
   },
   // CodeQL: Missing rate limiting (public write endpoints)
   publicWrite: {
     windowMs: 10 * 60 * 1000,
     max: 30,
-    message: 'Too many write requests, please slow down.',
+    message: "Too many write requests, please slow down.",
   },
   // CodeQL: Missing rate limiting (password reset endpoints)
   passwordReset: {
     windowMs: 60 * 60 * 1000,
     max: 3,
-    message: 'Too many password reset attempts, please try again later.',
+    message: "Too many password reset attempts, please try again later.",
   },
   // CodeQL: Missing rate limiting (general API)
   api: {
     windowMs: 1 * 60 * 1000,
     max: 100,
-    message: 'Too many requests, please slow down.',
+    message: "Too many requests, please slow down.",
   },
 } as const;
 
@@ -38,7 +37,7 @@ export const emailSignupLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 signup attempts per windowMs
   message: {
-    error: 'Too many signup attempts from this IP, please try again later.'
+    error: "Too many signup attempts from this IP, please try again later.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -54,7 +53,7 @@ export const authLimiter = rateLimit({
   windowMs: RATE_LIMITS.auth.windowMs, // 15 minutes
   max: RATE_LIMITS.auth.max, // Limit each IP to 10 login attempts per window
   message: {
-    error: RATE_LIMITS.auth.message
+    error: RATE_LIMITS.auth.message,
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -70,7 +69,7 @@ export const publicWriteLimiter = rateLimit({
   windowMs: RATE_LIMITS.publicWrite.windowMs, // 10 minutes
   max: RATE_LIMITS.publicWrite.max, // 30 writes per 10 minutes
   message: {
-    error: RATE_LIMITS.publicWrite.message
+    error: RATE_LIMITS.publicWrite.message,
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -85,7 +84,7 @@ export const passwordResetLimiter = rateLimit({
   windowMs: RATE_LIMITS.passwordReset.windowMs, // 1 hour
   max: RATE_LIMITS.passwordReset.max, // Only 3 password reset requests per hour
   message: {
-    error: RATE_LIMITS.passwordReset.message
+    error: RATE_LIMITS.passwordReset.message,
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -100,31 +99,52 @@ export const apiLimiter = rateLimit({
   windowMs: RATE_LIMITS.api.windowMs, // 1 minute
   max: RATE_LIMITS.api.max, // 100 requests per minute
   message: {
-    error: RATE_LIMITS.api.message
+    error: RATE_LIMITS.api.message,
   },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 /**
+ * Static file rate limiter for HTML/template serving
+ * Limits to 60 requests per minute per IP address
+ * Prevents abuse of file system operations while allowing normal browsing
+ * CodeQL: Missing rate limiting - addresses file system access routes
+ */
+export const staticFileLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute (1 per second average)
+  message: {
+    error: "Too many requests, please slow down.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for static assets (CSS, JS, images)
+    const staticExtensions = /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i;
+    return staticExtensions.test(req.path);
+  },
+});
+
+/**
  * Honeypot validation middleware to catch bots
- * 
+ *
  * Checks for a hidden form field named 'company' that humans won't fill but bots will.
  * On the frontend, include a hidden input: <input type="text" name="company" style="display:none" />
  * Legitimate users won't see or fill this field, but automated bots typically fill all fields.
- * 
+ *
  * @param req - Express request object with 'company' field in body
  * @param res - Express response object
  * @param next - Express next function
  */
 export const validateHoneypot = (req: Request, res: Response, next: NextFunction) => {
   const { company } = req.body;
-  
+
   // If honeypot field is filled, it's likely a bot
-  if (company && company.trim() !== '') {
-    return res.status(400).json({ error: 'Invalid submission' });
+  if (company && company.trim() !== "") {
+    return res.status(400).json({ error: "Invalid submission" });
   }
-  
+
   next();
 };
 
@@ -137,18 +157,18 @@ export const validateHoneypot = (req: Request, res: Response, next: NextFunction
  */
 export const validateEmail = (req: Request, res: Response, next: NextFunction) => {
   const { email } = req.body;
-  
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'Email is required' });
+
+  if (!email || typeof email !== "string") {
+    return res.status(400).json({ error: "Email is required" });
   }
-  
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmedEmail = email.trim();
-  
+
   if (!emailRegex.test(trimmedEmail) || trimmedEmail.length < 3 || trimmedEmail.length > 254) {
-    return res.status(400).json({ error: 'Please enter a valid email address' });
+    return res.status(400).json({ error: "Please enter a valid email address" });
   }
-  
+
   // Normalize email
   req.body.email = trimmedEmail.toLowerCase();
   next();
@@ -164,28 +184,20 @@ export const validateEmail = (req: Request, res: Response, next: NextFunction) =
  * @param next - Express next function
  */
 export const validateUserAgent = (req: Request, res: Response, next: NextFunction) => {
-  const userAgent = req.get('User-Agent');
-  
+  const userAgent = req.get("User-Agent");
+
   // Block requests without user agent (likely bots)
   if (!userAgent) {
-    return res.status(400).json({ error: 'Invalid request' });
+    return res.status(400).json({ error: "Invalid request" });
   }
-  
+
   // Block common bot patterns
-  const botPatterns = [
-    /bot/i,
-    /crawler/i,
-    /spider/i,
-    /scraper/i,
-    /curl/i,
-    /wget/i,
-    /python/i
-  ];
-  
-  if (botPatterns.some(pattern => pattern.test(userAgent))) {
-    return res.status(400).json({ error: 'Automated requests not allowed' });
+  const botPatterns = [/bot/i, /crawler/i, /spider/i, /scraper/i, /curl/i, /wget/i, /python/i];
+
+  if (botPatterns.some((pattern) => pattern.test(userAgent))) {
+    return res.status(400).json({ error: "Automated requests not allowed" });
   }
-  
+
   next();
 };
 
@@ -199,11 +211,12 @@ export const validateUserAgent = (req: Request, res: Response, next: NextFunctio
  */
 export const logIPAddress = (req: Request, res: Response, next: NextFunction) => {
   // Get real IP address (accounting for proxies)
-  const ip = req.headers['x-forwarded-for'] || 
-             req.headers['x-real-ip'] || 
-             req.connection.remoteAddress || 
-             req.socket.remoteAddress;
-  
+  const ip =
+    req.headers["x-forwarded-for"] ||
+    req.headers["x-real-ip"] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress;
+
   req.body.ipAddress = Array.isArray(ip) ? ip[0] : ip;
   next();
 };

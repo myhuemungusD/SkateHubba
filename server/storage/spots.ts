@@ -1,7 +1,7 @@
-import { eq, desc, and, sql, getTableColumns } from 'drizzle-orm';
-import { db } from '../db';
-import { spots, customUsers, type Spot, type InsertSpot } from '@shared/schema';
-import logger from '../logger';
+import { eq, desc, and, sql, getTableColumns } from "drizzle-orm";
+import { db } from "../db";
+import { spots, customUsers, type Spot, type InsertSpot } from "@shared/schema";
+import logger from "../logger";
 
 export interface SpotFilters {
   city?: string;
@@ -13,7 +13,7 @@ export interface SpotFilters {
   offset?: number;
 }
 
-export type SpotWithCreator = Spot & { 
+export type SpotWithCreator = Spot & {
   creatorName: string | null;
   creatorFirstName?: string | null;
   creatorLastName?: string | null;
@@ -31,31 +31,34 @@ export class SpotStorage {
    */
   async createSpot(data: InsertSpot & { createdBy?: string | null }): Promise<Spot> {
     if (!db) {
-      throw new Error('Database not available');
+      throw new Error("Database not available");
     }
 
-    const [spot] = await db.insert(spots).values({
-      name: data.name,
-      description: data.description ?? null,
-      spotType: data.spotType ?? 'street',
-      tier: data.tier ?? 'bronze',
-      lat: data.lat,
-      lng: data.lng,
-      address: data.address ?? null,
-      city: data.city ?? null,
-      state: data.state ?? null,
-      country: data.country ?? 'USA',
-      photoUrl: data.photoUrl,
-      thumbnailUrl: null,
-      createdBy: data.createdBy ?? null,
-      verified: false,
-      isActive: true,
-      checkInCount: 0,
-      rating: 0,
-      ratingCount: 0,
-    }).returning();
+    const [spot] = await db
+      .insert(spots)
+      .values({
+        name: data.name,
+        description: data.description ?? null,
+        spotType: data.spotType ?? "street",
+        tier: data.tier ?? "bronze",
+        lat: data.lat,
+        lng: data.lng,
+        address: data.address ?? null,
+        city: data.city ?? null,
+        state: data.state ?? null,
+        country: data.country ?? "USA",
+        photoUrl: data.photoUrl,
+        thumbnailUrl: null,
+        createdBy: data.createdBy ?? null,
+        verified: false,
+        isActive: true,
+        checkInCount: 0,
+        rating: 0,
+        ratingCount: 0,
+      })
+      .returning();
 
-    logger.info('Spot created', { spotId: spot.id, name: spot.name });
+    logger.info("Spot created", { spotId: spot.id, name: spot.name });
     return spot;
   }
 
@@ -64,7 +67,7 @@ export class SpotStorage {
    */
   async getAllSpots(filters: SpotFilters = {}): Promise<SpotWithCreator[]> {
     if (!db) {
-      logger.warn('Database not available, returning empty spots');
+      logger.warn("Database not available, returning empty spots");
       return [];
     }
 
@@ -86,23 +89,31 @@ export class SpotStorage {
       conditions.push(eq(spots.verified, filters.verified));
     }
 
-    let query = db.select({
-      ...getTableColumns(spots),
-      creatorFirstName: customUsers.firstName,
-      creatorLastName: customUsers.lastName,
-    }).from(spots).leftJoin(customUsers, eq(spots.createdBy, customUsers.id)).where(and(...conditions)).orderBy(desc(spots.createdAt));
+    const baseQuery = db
+      .select({
+        ...getTableColumns(spots),
+        creatorFirstName: customUsers.firstName,
+        creatorLastName: customUsers.lastName,
+      })
+      .from(spots)
+      .leftJoin(customUsers, eq(spots.createdBy, customUsers.id))
+      .where(and(...conditions))
+      .orderBy(desc(spots.createdAt))
+      .$dynamic();
 
     if (filters.limit) {
-      query = query.limit(filters.limit);
+      baseQuery.limit(filters.limit);
     }
     if (filters.offset) {
-      query = query.offset(filters.offset);
+      baseQuery.offset(filters.offset);
     }
 
-    const results = await query;
+    const results = await baseQuery;
     return results.map((row: SpotQueryRow) => ({
       ...row,
-      creatorName: row.creatorFirstName ? `${row.creatorFirstName} ${row.creatorLastName || ''}`.trim() : 'Anonymous',
+      creatorName: row.creatorFirstName
+        ? `${row.creatorFirstName} ${row.creatorLastName || ""}`.trim()
+        : "Anonymous",
     }));
   }
 
@@ -114,18 +125,23 @@ export class SpotStorage {
       return null;
     }
 
-    const [spot] = await db.select({
-      ...getTableColumns(spots),
-      creatorFirstName: customUsers.firstName,
-      creatorLastName: customUsers.lastName,
-    }).from(spots).leftJoin(customUsers, eq(spots.createdBy, customUsers.id)).where(
-      and(eq(spots.id, id), eq(spots.isActive, true))
-    ).limit(1);
+    const [spot] = await db
+      .select({
+        ...getTableColumns(spots),
+        creatorFirstName: customUsers.firstName,
+        creatorLastName: customUsers.lastName,
+      })
+      .from(spots)
+      .leftJoin(customUsers, eq(spots.createdBy, customUsers.id))
+      .where(and(eq(spots.id, id), eq(spots.isActive, true)))
+      .limit(1);
 
     if (!spot) return null;
     return {
       ...spot,
-      creatorName: spot.creatorFirstName ? `${spot.creatorFirstName} ${spot.creatorLastName || ''}`.trim() : 'Anonymous',
+      creatorName: spot.creatorFirstName
+        ? `${spot.creatorFirstName} ${spot.creatorLastName || ""}`.trim()
+        : "Anonymous",
     };
   }
 
@@ -146,23 +162,31 @@ export class SpotStorage {
     // 1 degree latitude ≈ 111 km
     // 1 degree longitude ≈ 111 * cos(lat) km
     const latDelta = radiusKm / 111;
-    const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+    const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
 
-    const results = await db.select({
-      ...getTableColumns(spots),
-      creatorFirstName: customUsers.firstName,
-      creatorLastName: customUsers.lastName,
-    }).from(spots).leftJoin(customUsers, eq(spots.createdBy, customUsers.id)).where(
-      and(
-        eq(spots.isActive, true),
-        sql`${spots.lat} BETWEEN ${lat - latDelta} AND ${lat + latDelta}`,
-        sql`${spots.lng} BETWEEN ${lng - lngDelta} AND ${lng + lngDelta}`
+    const results = await db
+      .select({
+        ...getTableColumns(spots),
+        creatorFirstName: customUsers.firstName,
+        creatorLastName: customUsers.lastName,
+      })
+      .from(spots)
+      .leftJoin(customUsers, eq(spots.createdBy, customUsers.id))
+      .where(
+        and(
+          eq(spots.isActive, true),
+          sql`${spots.lat} BETWEEN ${lat - latDelta} AND ${lat + latDelta}`,
+          sql`${spots.lng} BETWEEN ${lng - lngDelta} AND ${lng + lngDelta}`
+        )
       )
-    ).orderBy(desc(spots.createdAt)).limit(limit);
+      .orderBy(desc(spots.createdAt))
+      .limit(limit);
 
     return results.map((row: SpotQueryRow) => ({
       ...row,
-      creatorName: row.creatorFirstName ? `${row.creatorFirstName} ${row.creatorLastName || ''}`.trim() : 'Anonymous',
+      creatorName: row.creatorFirstName
+        ? `${row.creatorFirstName} ${row.creatorLastName || ""}`.trim()
+        : "Anonymous",
     }));
   }
 
@@ -171,10 +195,11 @@ export class SpotStorage {
    */
   async updateSpot(id: number, data: Partial<InsertSpot>): Promise<Spot | null> {
     if (!db) {
-      throw new Error('Database not available');
+      throw new Error("Database not available");
     }
 
-    const [updated] = await db.update(spots)
+    const [updated] = await db
+      .update(spots)
       .set({
         ...data,
         updatedAt: new Date(),
@@ -183,7 +208,7 @@ export class SpotStorage {
       .returning();
 
     if (updated) {
-      logger.info('Spot updated', { spotId: id });
+      logger.info("Spot updated", { spotId: id });
     }
     return updated || null;
   }
@@ -193,16 +218,17 @@ export class SpotStorage {
    */
   async deleteSpot(id: number): Promise<boolean> {
     if (!db) {
-      throw new Error('Database not available');
+      throw new Error("Database not available");
     }
 
-    const [deleted] = await db.update(spots)
+    const [deleted] = await db
+      .update(spots)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(spots.id, id))
       .returning();
 
     if (deleted) {
-      logger.info('Spot deleted (soft)', { spotId: id });
+      logger.info("Spot deleted (soft)", { spotId: id });
     }
     return !!deleted;
   }
@@ -212,17 +238,18 @@ export class SpotStorage {
    */
   async incrementCheckIn(id: number): Promise<void> {
     if (!db) {
-      throw new Error('Database not available');
+      throw new Error("Database not available");
     }
 
-    await db.update(spots)
+    await db
+      .update(spots)
       .set({
         checkInCount: sql`${spots.checkInCount} + 1`,
         updatedAt: new Date(),
       })
       .where(eq(spots.id, id));
 
-    logger.info('Spot check-in incremented', { spotId: id });
+    logger.info("Spot check-in incremented", { spotId: id });
   }
 
   /**
@@ -230,7 +257,7 @@ export class SpotStorage {
    */
   async updateRating(id: number, newRating: number): Promise<void> {
     if (!db) {
-      throw new Error('Database not available');
+      throw new Error("Database not available");
     }
 
     const spot = await this.getSpotById(id);
@@ -239,7 +266,8 @@ export class SpotStorage {
     const newCount = spot.ratingCount + 1;
     const newAvg = ((spot.rating || 0) * spot.ratingCount + newRating) / newCount;
 
-    await db.update(spots)
+    await db
+      .update(spots)
       .set({
         rating: newAvg,
         ratingCount: newCount,
@@ -247,7 +275,7 @@ export class SpotStorage {
       })
       .where(eq(spots.id, id));
 
-    logger.info('Spot rating updated', { spotId: id, newRating: newAvg, count: newCount });
+    logger.info("Spot rating updated", { spotId: id, newRating: newAvg, count: newCount });
   }
 
   /**
@@ -255,16 +283,17 @@ export class SpotStorage {
    */
   async verifySpot(id: number): Promise<Spot | null> {
     if (!db) {
-      throw new Error('Database not available');
+      throw new Error("Database not available");
     }
 
-    const [verified] = await db.update(spots)
+    const [verified] = await db
+      .update(spots)
       .set({ verified: true, updatedAt: new Date() })
       .where(eq(spots.id, id))
       .returning();
 
     if (verified) {
-      logger.info('Spot verified', { spotId: id });
+      logger.info("Spot verified", { spotId: id });
     }
     return verified || null;
   }
@@ -277,17 +306,22 @@ export class SpotStorage {
       return [];
     }
 
-    const results = await db.select({
-      ...getTableColumns(spots),
-      creatorFirstName: customUsers.firstName,
-      creatorLastName: customUsers.lastName,
-    }).from(spots).leftJoin(customUsers, eq(spots.createdBy, customUsers.id)).where(
-      and(eq(spots.createdBy, userId), eq(spots.isActive, true))
-    ).orderBy(desc(spots.createdAt));
+    const results = await db
+      .select({
+        ...getTableColumns(spots),
+        creatorFirstName: customUsers.firstName,
+        creatorLastName: customUsers.lastName,
+      })
+      .from(spots)
+      .leftJoin(customUsers, eq(spots.createdBy, customUsers.id))
+      .where(and(eq(spots.createdBy, userId), eq(spots.isActive, true)))
+      .orderBy(desc(spots.createdAt));
 
     return results.map((row: SpotQueryRow) => ({
       ...row,
-      creatorName: row.creatorFirstName ? `${row.creatorFirstName} ${row.creatorLastName || ''}`.trim() : 'Anonymous',
+      creatorName: row.creatorFirstName
+        ? `${row.creatorFirstName} ${row.creatorLastName || ""}`.trim()
+        : "Anonymous",
     }));
   }
 
@@ -299,11 +333,14 @@ export class SpotStorage {
       return { total: 0, verified: 0, cities: 0 };
     }
 
-    const [stats] = await db.select({
-      total: sql<number>`count(*)::int`,
-      verified: sql<number>`count(*) filter (where ${spots.verified} = true)::int`,
-      cities: sql<number>`count(distinct ${spots.city})::int`,
-    }).from(spots).where(eq(spots.isActive, true));
+    const [stats] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        verified: sql<number>`count(*) filter (where ${spots.verified} = true)::int`,
+        cities: sql<number>`count(distinct ${spots.city})::int`,
+      })
+      .from(spots)
+      .where(eq(spots.isActive, true));
 
     return stats || { total: 0, verified: 0, cities: 0 };
   }

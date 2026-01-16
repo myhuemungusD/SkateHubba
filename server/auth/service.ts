@@ -1,11 +1,11 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { db } from '../db.ts';
-import { customUsers, authSessions } from '../../shared/schema.ts';
-import { eq, and, gt } from 'drizzle-orm';
-import type { CustomUser, InsertCustomUser, AuthSession } from '../../shared/schema.ts';
-import { env } from '../config/env';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { getDb } from "../db.ts";
+import { customUsers, authSessions } from "../../shared/schema.ts";
+import { eq, and, gt } from "drizzle-orm";
+import type { CustomUser, InsertCustomUser, AuthSession } from "../../shared/schema.ts";
+import { env } from "../config/env";
 
 /**
  * Authentication service for SkateHubba
@@ -20,11 +20,11 @@ export class AuthService {
 
   /**
    * Hash a plaintext password using bcrypt
-   * 
+   *
    * Uses bcrypt with 12 salt rounds for secure password hashing.
    * Bcrypt is chosen for its adaptive nature - it remains secure as hardware
    * improves by allowing the number of rounds to be increased over time.
-   * 
+   *
    * @param password - The plaintext password to hash
    * @returns Promise resolving to the hashed password
    */
@@ -49,13 +49,13 @@ export class AuthService {
    */
   static generateJWT(userId: string): string {
     return jwt.sign(
-      { 
-        userId, 
-        type: 'access',
-        jti: crypto.randomBytes(16).toString('hex') // Unique token ID
+      {
+        userId,
+        type: "access",
+        jti: crypto.randomBytes(16).toString("hex"), // Unique token ID
       },
       this.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
   }
 
@@ -66,9 +66,16 @@ export class AuthService {
    */
   static verifyJWT(token: string): { userId: string } | null {
     try {
-      const decoded = jwt.verify(token, this.JWT_SECRET) as any;
+      interface JWTPayload {
+        userId: string;
+        type: string;
+        jti: string;
+        iat: number;
+        exp: number;
+      }
+      const decoded = jwt.verify(token, this.JWT_SECRET) as JWTPayload;
       return { userId: decoded.userId };
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -78,7 +85,7 @@ export class AuthService {
    * @returns 64-character hexadecimal token
    */
   static generateSecureToken(): string {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString("hex");
   }
 
   /**
@@ -98,13 +105,13 @@ export class AuthService {
     lastName: string;
     firebaseUid?: string;
   }): Promise<{ user: CustomUser; emailToken: string }> {
-    const passwordHash = userData.firebaseUid 
-      ? 'firebase-auth-user' // Placeholder for Firebase users
+    const passwordHash = userData.firebaseUid
+      ? "firebase-auth-user" // Placeholder for Firebase users
       : await this.hashPassword(userData.password);
     const emailToken = this.generateSecureToken();
     const emailTokenExpiry = new Date(Date.now() + this.EMAIL_TOKEN_EXPIRY);
 
-    const [user] = await db
+    const [user] = await getDb()
       .insert(customUsers)
       .values({
         email: userData.email.toLowerCase().trim(),
@@ -128,11 +135,11 @@ export class AuthService {
    * @returns Promise resolving to user object if found, null otherwise
    */
   static async findUserByEmail(email: string): Promise<CustomUser | null> {
-    const [user] = await db
+    const [user] = await getDb()
       .select()
       .from(customUsers)
       .where(eq(customUsers.email, email.toLowerCase().trim()));
-    
+
     return user || null;
   }
 
@@ -142,11 +149,8 @@ export class AuthService {
    * @returns Promise resolving to user object if found, null otherwise
    */
   static async findUserById(id: string): Promise<CustomUser | null> {
-    const [user] = await db
-      .select()
-      .from(customUsers)
-      .where(eq(customUsers.id, id));
-    
+    const [user] = await getDb().select().from(customUsers).where(eq(customUsers.id, id));
+
     return user || null;
   }
 
@@ -156,11 +160,11 @@ export class AuthService {
    * @returns Promise resolving to user object if found, null otherwise
    */
   static async findUserByFirebaseUid(firebaseUid: string): Promise<CustomUser | null> {
-    const [user] = await db
+    const [user] = await getDb()
       .select()
       .from(customUsers)
       .where(eq(customUsers.firebaseUid, firebaseUid));
-    
+
     return user || null;
   }
 
@@ -170,7 +174,7 @@ export class AuthService {
    * @returns Promise resolving to updated user if token is valid, null otherwise
    */
   static async verifyEmail(token: string): Promise<CustomUser | null> {
-    const [user] = await db
+    const [user] = await getDb()
       .select()
       .from(customUsers)
       .where(
@@ -183,7 +187,7 @@ export class AuthService {
     if (!user) return null;
 
     // Update user as verified
-    const [updatedUser] = await db
+    const [updatedUser] = await getDb()
       .update(customUsers)
       .set({
         isEmailVerified: true,
@@ -203,7 +207,7 @@ export class AuthService {
    * @returns Promise resolving to updated user if found, null otherwise
    */
   static async verifyEmailByUserId(userId: string): Promise<CustomUser | null> {
-    const [updatedUser] = await db
+    const [updatedUser] = await getDb()
       .update(customUsers)
       .set({
         isEmailVerified: true,
@@ -226,7 +230,7 @@ export class AuthService {
     const token = this.generateJWT(userId);
     const expiresAt = new Date(Date.now() + this.TOKEN_EXPIRY);
 
-    const [session] = await db
+    const [session] = await getDb()
       .insert(authSessions)
       .values({
         userId,
@@ -249,15 +253,10 @@ export class AuthService {
     if (!decoded) return null;
 
     // Check if session exists and is valid
-    const [session] = await db
+    const [session] = await getDb()
       .select()
       .from(authSessions)
-      .where(
-        and(
-          eq(authSessions.token, token),
-          gt(authSessions.expiresAt, new Date())
-        )
-      );
+      .where(and(eq(authSessions.token, token), gt(authSessions.expiresAt, new Date())));
 
     if (!session) return null;
 
@@ -271,9 +270,7 @@ export class AuthService {
    * @returns Promise that resolves when session is deleted
    */
   static async deleteSession(token: string): Promise<void> {
-    await db
-      .delete(authSessions)
-      .where(eq(authSessions.token, token));
+    await getDb().delete(authSessions).where(eq(authSessions.token, token));
   }
 
   /**
@@ -282,11 +279,11 @@ export class AuthService {
    * @returns Promise resolving to number of sessions deleted
    */
   static async deleteAllUserSessions(userId: string): Promise<number> {
-    const result = await db
+    const result = await getDb()
       .delete(authSessions)
       .where(eq(authSessions.userId, userId))
       .returning();
-    
+
     return result.length;
   }
 
@@ -296,7 +293,7 @@ export class AuthService {
    * @returns Promise that resolves when update is complete
    */
   static async updateLastLogin(userId: string): Promise<void> {
-    await db
+    await getDb()
       .update(customUsers)
       .set({
         lastLoginAt: new Date(),
@@ -317,7 +314,7 @@ export class AuthService {
     const resetToken = this.generateSecureToken();
     const resetExpiry = new Date(Date.now() + this.EMAIL_TOKEN_EXPIRY);
 
-    await db
+    await getDb()
       .update(customUsers)
       .set({
         resetPasswordToken: resetToken,
@@ -337,7 +334,7 @@ export class AuthService {
    * @returns Promise resolving to updated user if token is valid, null otherwise
    */
   static async resetPassword(token: string, newPassword: string): Promise<CustomUser | null> {
-    const [user] = await db
+    const [user] = await getDb()
       .select()
       .from(customUsers)
       .where(
@@ -351,7 +348,7 @@ export class AuthService {
 
     const passwordHash = await this.hashPassword(newPassword);
 
-    const [updatedUser] = await db
+    const [updatedUser] = await getDb()
       .update(customUsers)
       .set({
         passwordHash,
@@ -385,22 +382,22 @@ export class AuthService {
     currentSessionToken?: string
   ): Promise<{ success: boolean; message: string }> {
     const user = await this.findUserById(userId);
-    
+
     if (!user) {
-      return { success: false, message: 'User not found' };
+      return { success: false, message: "User not found" };
     }
 
     // Skip password verification for Firebase users
-    if (user.passwordHash !== 'firebase-auth-user') {
+    if (user.passwordHash !== "firebase-auth-user") {
       const isValid = await this.verifyPassword(currentPassword, user.passwordHash);
       if (!isValid) {
-        return { success: false, message: 'Current password is incorrect' };
+        return { success: false, message: "Current password is incorrect" };
       }
     }
 
     const passwordHash = await this.hashPassword(newPassword);
 
-    await db
+    await getDb()
       .update(customUsers)
       .set({
         passwordHash,
@@ -412,20 +409,20 @@ export class AuthService {
     if (currentSessionToken) {
       // Delete all sessions, then recreate current one
       const sessionsDeleted = await this.deleteAllUserSessions(userId);
-      
+
       // Create new session for current device
       await this.createSession(userId);
-      
-      return { 
-        success: true, 
-        message: `Password changed. ${sessionsDeleted} other session(s) logged out.` 
+
+      return {
+        success: true,
+        message: `Password changed. ${sessionsDeleted} other session(s) logged out.`,
       };
     } else {
       // Delete ALL sessions including current
       await this.deleteAllUserSessions(userId);
-      return { 
-        success: true, 
-        message: 'Password changed. All sessions have been logged out.' 
+      return {
+        success: true,
+        message: "Password changed. All sessions have been logged out.",
       };
     }
   }
@@ -436,8 +433,11 @@ export class AuthService {
    * @param updates - Partial user data to update
    * @returns Promise resolving to updated user if found, null otherwise
    */
-  static async updateUser(userId: string, updates: Partial<InsertCustomUser>): Promise<CustomUser | null> {
-    const [updatedUser] = await db
+  static async updateUser(
+    userId: string,
+    updates: Partial<InsertCustomUser>
+  ): Promise<CustomUser | null> {
+    const [updatedUser] = await getDb()
       .update(customUsers)
       .set({
         ...updates,
