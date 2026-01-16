@@ -8,19 +8,27 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "concurrently \"pnpm --filter ./client dev\" \"pnpm --filter ./server dev\"",
+    "dev": "turbo dev",
     "start": "tsx server/index.ts",
-    "build": "pnpm --filter ./shared build && pnpm --filter ./client build && pnpm --filter ./server build && pnpm run package:dist",
-    "build:ci": "pnpm install --frozen-lockfile && pnpm build",
-    "check": "pnpm -r run typecheck",
+    "build": "turbo build",
+    "build:ci": "pnpm install --frozen-lockfile && turbo build",
+    "check": "turbo typecheck",
     "package:dist": "node scripts/assemble-dist.mjs",
-    "lint": "pnpm -r run lint",
-    "typecheck": "pnpm -r run typecheck",
-    "test": "vitest run",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lockfile:check": "pnpm install --frozen-lockfile --ignore-scripts",
-    "precommit:deps": "echo '⚠️  If you changed any package.json, run: pnpm install && git add pnpm-lock.yaml'"
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -31,7 +39,10 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.0",
     "globals": "^17.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.0.0",
+    "turbo": "^2.7.4",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.53.0",
     "vitest": "^4.0.17"

@@ -1,0 +1,8 @@
+# Verify lockfile is in sync
+pnpm install --frozen-lockfile --ignore-scripts || {
+  echo "❌ Lockfile out of sync! Run 'pnpm install' and commit pnpm-lock.yaml"
+  exit 1
+}
+
+# Run lint-staged (lints and formats only staged files)
+pnpm lint-staged
