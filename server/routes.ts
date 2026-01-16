@@ -3,8 +3,8 @@ import { createServer, type Server } from "http";
 import { setupAuthRoutes } from "./auth/routes";
 import { spotStorage } from "./storage/spots";
 import { db } from "./db";
-import { customUsers, userProfiles } from "@shared/schema";
-import { ilike, or, eq } from "drizzle-orm";
+import { customUsers, userProfiles, spots, games } from "@shared/schema";
+import { ilike, or, eq, count } from "drizzle-orm";
 import { insertSpotSchema } from "@shared/schema";
 import { publicWriteLimiter } from "./middleware/security";
 import { requireCsrfToken } from "./middleware/csrf";
@@ -78,7 +78,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 3. Create HTTP Server
+  // 3. Public Stats Endpoint (for landing page)
+  app.get("/api/stats", async (_req, res) => {
+    try {
+      const [usersResult, spotsResult, gamesResult] = await Promise.all([
+        db.select({ count: count() }).from(customUsers),
+        db.select({ count: count() }).from(spots),
+        db.select({ count: count() }).from(games),
+      ]);
+
+      res.json({
+        totalUsers: usersResult[0]?.count || 0,
+        totalSpots: spotsResult[0]?.count || 0,
+        totalBattles: gamesResult[0]?.count || 0,
+      });
+    } catch {
+      // Return null stats on error - frontend handles gracefully
+      res.json({ totalUsers: 0, totalSpots: 0, totalBattles: 0 });
+    }
+  });
+
+  // 4. Create HTTP Server
   const httpServer = createServer(app);
   return httpServer;
 }
