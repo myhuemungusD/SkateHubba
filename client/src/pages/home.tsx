@@ -1,4 +1,3 @@
-import Navigation from "../components/Navigation";
 import BackgroundCarousel from "../components/BackgroundCarousel";
 import EmailSignup from "../components/EmailSignup";
 import { DonorRecognition } from "../components/DonorRecognition";
@@ -35,8 +34,6 @@ export default function Home() {
 
   return (
     <BackgroundCarousel className="text-white">
-      <Navigation />
-
       {/* HERO SECTION */}
       <section className="relative min-h-screen flex flex-col justify-center items-center text-center px-6">
         {/* Graffiti Background - More prominent */}
