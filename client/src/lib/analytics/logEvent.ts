@@ -1,4 +1,4 @@
-import { AnalyticsIngestSchema, type EventName } from "../../../shared/analytics-events";
+import { AnalyticsIngestSchema, type EventName } from "@shared/analytics-events";
 import { auth } from "../firebase";
 
 /**
