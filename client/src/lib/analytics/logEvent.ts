@@ -20,13 +20,31 @@ function generateEventId(): string {
  * Get or create a persistent session ID for this browser session.
  * Stored in sessionStorage so it persists across page navigations
  * but clears when the browser tab is closed.
+ *
+ * Falls back to an in-memory ID if sessionStorage is unavailable
+ * or throws (e.g., in private browsing or non-browser environments).
  */
 function getSessionId(): string {
   const key = "skatehubba_session_id";
-  let sessionId = sessionStorage.getItem(key);
+  let sessionId: string | null = null;
+
+  // Guard against non-browser environments and storage access errors.
+  if (typeof window !== "undefined" && typeof window.sessionStorage !== "undefined") {
+    try {
+      sessionId = window.sessionStorage.getItem(key);
+      if (!sessionId) {
+        sessionId = generateEventId();
+        window.sessionStorage.setItem(key, sessionId);
+      }
+    } catch {
+      // If accessing sessionStorage fails for any reason,
+      // fall through to the non-persistent fallback below.
+    }
+  }
+
+  // If we couldn't use sessionStorage, still return a valid session ID.
   if (!sessionId) {
     sessionId = generateEventId();
-    sessionStorage.setItem(key, sessionId);
   }
   return sessionId;
 }
