@@ -6,7 +6,7 @@
 
 import type { Server, Socket } from "socket.io";
 import logger from "../../logger";
-import { joinRoom, leaveRoom, broadcastToRoom, getRoomInfo } from "../rooms";
+import { joinRoom, leaveRoom, broadcastToRoom } from "../rooms";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
