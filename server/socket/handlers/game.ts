@@ -229,13 +229,14 @@ export function registerGameHandlers(io: TypedServer, socket: TypedSocket): void
       broadcastToRoom(io, "game", input.gameId, "game:trick", trickPayload);
 
       // Move to next phase/player
+      const originalSetter = game.players[game.currentTurn];
       if (game.currentAction === "set") {
         // Setter landed, now others attempt
         game.currentAction = "attempt";
         game.currentTurn = (game.currentTurn + 1) % game.players.length;
 
         // Skip the setter
-        if (game.players[game.currentTurn] === data.odv) {
+        if (game.players[game.currentTurn] === originalSetter) {
           game.currentTurn = (game.currentTurn + 1) % game.players.length;
         }
       } else {
