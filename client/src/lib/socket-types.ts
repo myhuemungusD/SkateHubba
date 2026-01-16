@@ -141,7 +141,7 @@ export interface ClientToServerEvents {
 // ============================================================================
 
 export interface ServerToClientEvents {
-  connected: (data: { odv: string; serverTime: string }) => void;
+  connected: (data: { userId: string; serverTime: string }) => void;
   error: (data: { code: string; message: string }) => void;
   "battle:created": (data: BattleCreatedPayload) => void;
   "battle:joined": (data: BattleJoinedPayload) => void;
