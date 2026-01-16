@@ -10,7 +10,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import logger from "./logger.ts";
 import { ensureCsrfToken, requireCsrfToken } from "./middleware/csrf.ts";
-import { apiLimiter } from "./middleware/security.ts";
+import { apiLimiter, staticFileLimiter } from "./middleware/security.ts";
 import { initializeSocketServer, shutdownSocketServer, getSocketStats } from "./socket/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -110,7 +110,9 @@ if (process.env.NODE_ENV === "development") {
 } else {
   const publicDir = path.resolve(__dirname, "../public");
   app.use(express.static(publicDir));
-  app.get("*", (_req, res) => {
+  // Rate limit HTML serving to prevent file system abuse
+  // CodeQL: Missing rate limiting - file system access now rate-limited
+  app.get("*", staticFileLimiter, (_req, res) => {
     res.sendFile(path.join(publicDir, "index.html"));
   });
 }
