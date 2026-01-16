@@ -9,10 +9,11 @@ import { staticFileLimiter } from "./middleware/security";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 
-// Conditional imports for development only
-let createViteServer: any;
-let createLogger: any;
-let viteLogger: any;
+// Dynamic imports for Vite - only loaded in development
+
+let viteModule: typeof import("vite") | null = null;
+
+let viteLogger: import("vite").Logger | null = null;
 
 // Inline vite config for dev server (avoids importing root vite.config.ts which has external deps)
 const viteConfig = {
@@ -27,10 +28,8 @@ const viteConfig = {
 };
 
 if (process.env.NODE_ENV === "development") {
-  const vite = await import("vite");
-  createViteServer = vite.createServer;
-  createLogger = vite.createLogger;
-  viteLogger = createLogger();
+  viteModule = await import("vite");
+  viteLogger = viteModule.createLogger();
 }
 
 export function log(message: string, source = "express") {
@@ -49,22 +48,28 @@ export async function setupVite(app: Express, server: Server) {
     throw new Error("setupVite should only be called in development mode");
   }
 
+  if (!viteModule) {
+    throw new Error("Vite module not loaded");
+  }
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
     allowedHosts: true as const,
   };
 
-  const vite = await createViteServer({
+  const vite = await viteModule.createServer({
     ...viteConfig,
     configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg: string, options: any) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      },
-    },
+    customLogger: viteLogger
+      ? {
+          ...viteLogger,
+          error: (msg: string, options?: { timestamp?: boolean; clear?: boolean }) => {
+            viteLogger?.error(msg, options);
+            process.exit(1);
+          },
+        }
+      : undefined,
     server: serverOptions,
     appType: "custom",
   });

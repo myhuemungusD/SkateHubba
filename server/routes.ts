@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuthRoutes } from "./auth/routes";
 import { spotStorage } from "./storage/spots";
-import { db } from "./db";
+import { getDb, isDatabaseAvailable } from "./db";
 import { customUsers, userProfiles, spots, games } from "@shared/schema";
 import { ilike, or, eq, count } from "drizzle-orm";
 import { insertSpotSchema } from "@shared/schema";
@@ -81,10 +81,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 3. Public Stats Endpoint (for landing page)
   app.get("/api/stats", async (_req, res) => {
     try {
+      if (!isDatabaseAvailable()) {
+        return res.json({ totalUsers: 0, totalSpots: 0, totalBattles: 0 });
+      }
+      const database = getDb();
       const [usersResult, spotsResult, gamesResult] = await Promise.all([
-        db.select({ count: count() }).from(customUsers),
-        db.select({ count: count() }).from(spots),
-        db.select({ count: count() }).from(games),
+        database.select({ count: count() }).from(customUsers),
+        database.select({ count: count() }).from(spots),
+        database.select({ count: count() }).from(games),
       ]);
 
       res.json({

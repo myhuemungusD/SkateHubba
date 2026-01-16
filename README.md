@@ -8,7 +8,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![CI](https://github.com/myhuemungusD/skatehubba1/actions/workflows/ci.yml/badge.svg)](https://github.com/myhuemungusD/skatehubba1/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/Tests-84%20passing-brightgreen.svg)](./vitest.config.mts)
-[![Coverage](https://img.shields.io/badge/Coverage-30%25%2B-yellow.svg)](./vitest.config.mts)
+[![Coverage](https://img.shields.io/badge/Coverage-3%25-red.svg)](./vitest.config.mts)
 [![CodeQL](https://github.com/myhuemungusD/skatehubba1/actions/workflows/codeql.yml/badge.svg)](https://github.com/myhuemungusD/skatehubba1/security/code-scanning)
 [![Security](https://img.shields.io/badge/Vulnerabilities-0-brightgreen.svg)](https://github.com/myhuemungusD/skatehubba1/security)
 

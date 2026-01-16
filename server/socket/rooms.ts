@@ -171,6 +171,8 @@ export function broadcastToRoom<E extends keyof ServerToClientEvents>(
   const roomId = getRoomId(type, id);
 
   if (excludeSocket) {
+    // Type assertion needed due to Socket.io generic constraints
+
     (excludeSocket.to(roomId) as any).emit(event, data);
   } else {
     (io.to(roomId) as any).emit(event, data);
