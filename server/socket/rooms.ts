@@ -171,9 +171,9 @@ export function broadcastToRoom<E extends keyof ServerToClientEvents>(
   const roomId = getRoomId(type, id);
 
   if (excludeSocket) {
-    excludeSocket.to(roomId).emit(event, data as never);
+    (excludeSocket.to(roomId) as any).emit(event, data);
   } else {
-    io.to(roomId).emit(event, data as never);
+    (io.to(roomId) as any).emit(event, data);
   }
 }
 
@@ -187,7 +187,8 @@ export function sendToUser<E extends keyof ServerToClientEvents>(
   data: Parameters<ServerToClientEvents[E]>[0]
 ): void {
   // User's personal room is their ID
-  io.to(`user:${odv}`).emit(event, data as never);
+
+  (io.to(`user:${odv}`) as any).emit(event, data);
 }
 
 /**

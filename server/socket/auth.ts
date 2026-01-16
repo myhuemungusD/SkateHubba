@@ -6,7 +6,9 @@
  */
 
 import type { Socket } from "socket.io";
-import type { ExtendedError } from "socket.io/dist/namespace";
+
+// ExtendedError type for socket.io middleware
+type ExtendedError = Error & { data?: unknown };
 import { admin } from "../admin";
 import { AuthService } from "../auth/service";
 import logger from "../logger";
@@ -129,6 +131,7 @@ export async function socketAuthMiddleware(
     // Attach user data to socket
     const socketData: SocketData = {
       userId: user.id,
+      odv: user.id,
       firebaseUid: decoded.uid,
       roles,
       connectedAt: new Date(),

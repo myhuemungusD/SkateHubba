@@ -216,6 +216,7 @@ export interface InterServerEvents {
 
 export interface SocketData {
   userId: string;
+  odv: string;
   firebaseUid: string;
   roles: string[];
   connectedAt: Date;

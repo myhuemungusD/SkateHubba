@@ -81,7 +81,7 @@ export function initializeSocketServer(
 
     // Send connection confirmation
     socket.emit("connected", {
-      odv: data.odv,
+      userId: data.odv,
       serverTime: new Date().toISOString(),
     });
 

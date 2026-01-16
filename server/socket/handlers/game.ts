@@ -15,7 +15,7 @@ import type {
   GameJoinedPayload,
   GameTrickPayload,
   GameTurnPayload,
-} from "./types";
+} from "../types";
 
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
