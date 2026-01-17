@@ -5,7 +5,7 @@
  * Firebase Auth is used ONLY for authentication, not profile storage
  */
 
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db, requireDb } from '../db';
 import { users } from '@shared/schema';
 import logger from '../logger';
@@ -128,6 +128,22 @@ export async function getOrCreateUser(input: CreateUserInput): Promise<User> {
   if (existing) {
     return existing;
   }
-  
-  return createUser(input);
+
+  try {
+    // Attempt to create the user. This may race with another concurrent request.
+    return await createUser(input);
+  } catch (err) {
+    // If another request inserted the same user concurrently, the database
+    // should raise a unique-constraint violation. In that case, re-read.
+    const code = (err as any)?.code;
+    if (code === '23505') {
+      const user = await getUserById(input.id);
+      if (user) {
+        return user;
+      }
+    }
+
+    // For non-unique-violation errors, or if re-reading failed, rethrow.
+    throw err;
+  }
 }
