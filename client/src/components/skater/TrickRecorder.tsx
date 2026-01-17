@@ -48,14 +48,29 @@ export default function TrickRecorder({ spotId, onRecordComplete, onClose }: Tri
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: true,
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' }, // Prefer back camera on mobile
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: true,
+        });
+      } catch (constraintError) {
+        console.warn(
+          'Back camera or facingMode constraint not available, retrying without facingMode:',
+          constraintError
+        );
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: true,
+        });
+      }
 
       streamRef.current = stream;
       if (videoRef.current) {
