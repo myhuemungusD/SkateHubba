@@ -109,7 +109,7 @@ The long-term goal is to own the **skate graph**: tricks, spots, battles, judgin
 
 ## Local Development
 
-### Prereqs
+### Prerequisites
 - Node.js **20+**
 - pnpm
 
