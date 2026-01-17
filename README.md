@@ -18,7 +18,7 @@
 
 ---
 
-## Table of Contents
+## Table of Contents 
 
 - [What is SkateHubba](#what-is-skatehubba)
 - [Core Product Loop](#core-product-loop)
