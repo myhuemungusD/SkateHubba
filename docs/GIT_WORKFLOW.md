@@ -138,7 +138,7 @@ git status
 VS Code will show conflict markers:
 
 ```
-<<<<<<< HEAD (your changes)
+<<<<<<< HEAD
 your code here
 =======
 their code here (from main)
