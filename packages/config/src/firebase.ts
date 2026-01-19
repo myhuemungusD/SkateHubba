@@ -226,6 +226,24 @@ function getBaseline(env: AppEnv): FirebaseConfig {
  * Precedence:
  * 1) Environment variables (validated)
  * 2) Baseline config (ONLY allowed for local, unless allowLocalFallback is true)
+ *
+ * @param options - Optional configuration for this helper.
+ *   - `logger`: Optional structured logger. If provided, it should expose
+ *     `info`, `warn`, and `error` methods compatible with the internal
+ *     {@link LogFn} signature. This allows consumers to forward Firebase
+ *     configuration events to their existing logging/observability stack
+ *     (e.g. pino, winston, Datadog, etc.).
+ *   - `allowLocalFallback`: When `true`, permits falling back to the
+ *     baseline config outside of local/development environments. By default,
+ *     only `local`/`development` may use the baseline config.
+ *
+ * Backwards compatibility:
+ * - The `options` parameter is optional and defaults to `{}`. Existing
+ *   callers that do not pass it will continue to work as before; logging
+ *   will be disabled via no-op log functions.
+ * - To integrate logging in existing callers, pass a `logger` that conforms
+ *   to the minimal interface used here:
+ *   `{ info(msg, meta?), warn(msg, meta?), error(msg, meta?) }`.
  */
 export function getFirebaseConfig(options: FirebaseConfigOptions = {}): FirebaseConfig {
   const env = getAppEnv();
