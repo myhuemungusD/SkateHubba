@@ -22,6 +22,10 @@ export interface FirebaseConfig {
   measurementId?: string;
 }
 
+export interface GetFirebaseConfigOptions {
+  allowLocalFallback?: boolean;
+}
+
 /**
  * Production config
  *
@@ -36,7 +40,7 @@ export interface FirebaseConfig {
  * for misconfigured local environments only.
  */
 const PRODUCTION_CONFIG: FirebaseConfig = {
-  apiKey: getPublicEnvOptional("EXPO_PUBLIC_FIREBASE_API_KEY_PROD") ?? "DUMMY_FIREBASE_API_KEY",
+  apiKey: "AIzaSyD6kLt4GKV4adX-oQ3m_aXIpL6GXBP0xZw",
   authDomain: "sk8hub-d7806.firebaseapp.com",
   projectId: "sk8hub-d7806",
   storageBucket: "sk8hub-d7806.firebasestorage.app",
@@ -65,7 +69,7 @@ const STAGING_CONFIG: FirebaseConfig = {
  *
  * Uses env vars if available, falls back to hardcoded config
  */
-export function getFirebaseConfig(): FirebaseConfig {
+export function getFirebaseConfig(options: GetFirebaseConfigOptions = {}): FirebaseConfig {
   const env = getAppEnv();
 
   // Try to read from env vars first (allows override)
@@ -91,9 +95,16 @@ export function getFirebaseConfig(): FirebaseConfig {
     };
   })();
 
+  const allowFallback =
+    (env !== "prod" && env !== "staging") || options.allowLocalFallback === true;
+
   if (envConfig) {
     console.log(`[Firebase] Using env-provided config for ${env}`);
     return envConfig;
+  }
+
+  if (!allowFallback) {
+    throw new Error(`[Firebase] Missing env config for ${env}; fallback disabled.`);
   }
 
   // Fall back to hardcoded config based on environment
