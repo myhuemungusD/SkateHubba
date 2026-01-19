@@ -20,7 +20,11 @@ import * as path from 'path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { eq } from 'drizzle-orm';
+<<<<<<< HEAD
 import { customUsers } from '../shared/schema';
+=======
+import { users } from '../shared/schema';
+>>>>>>> 7d0ee4c960b5f98af3743fdcc9837638d0889408
 
 const { Pool } = pg;
 
@@ -90,15 +94,24 @@ async function grantGodMode() {
       roles: ROLES
     });
 
+<<<<<<< HEAD
     // 5. Update PostgreSQL (single source of truth for user data)
     // Check if user exists in Postgres
     const existingUsers = await db.select()
       .from(customUsers)
       .where(eq(customUsers.id, user.uid))
+=======
+    // 5. Ensure user exists in PostgreSQL (single source of truth for profile data)
+    // Note: Roles are stored in Firebase Custom Claims, not in the database
+    const existingUsers = await db.select()
+      .from(users)
+      .where(eq(users.id, user.uid))
+>>>>>>> 7d0ee4c960b5f98af3743fdcc9837638d0889408
       .limit(1);
 
     if (existingUsers.length === 0) {
       // Create user record if doesn't exist
+<<<<<<< HEAD
       await db.insert(customUsers).values({
         id: user.uid,
         email: user.email || TARGET_EMAIL,
@@ -116,6 +129,15 @@ async function grantGodMode() {
         })
         .where(eq(customUsers.id, user.uid));
       console.log('✅ Updated user roles in PostgreSQL');
+=======
+      await db.insert(users).values({
+        id: user.uid,
+        email: user.email || TARGET_EMAIL,
+      });
+      console.log('✅ Created user record in PostgreSQL');
+    } else {
+      console.log('✅ User already exists in PostgreSQL');
+>>>>>>> 7d0ee4c960b5f98af3743fdcc9837638d0889408
     }
 
     console.log('');

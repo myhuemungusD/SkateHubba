@@ -1,5 +1,6 @@
 import { AnalyticsIngestSchema, type EventName } from "@shared/analytics-events";
 import { auth } from "../firebase";
+import { getAppConfig } from '@skatehubba/config';
 
 /**
  * Generate a ULID-like unique ID for event idempotency.
