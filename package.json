@@ -46,7 +46,7 @@
     "@eslint/js": "^9.39.2",
     "@vitest/coverage-v8": "^4.0.17",
     "concurrently": "^9.2.1",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.0",
@@ -61,8 +61,8 @@
   },
   "pnpm": {
     "overrides": {
-      "zod": "3.23.8",
-      "drizzle-zod": "0.7.0",
+      "zod": "3.25.76",
+      "drizzle-zod": "0.8.3",
       "path-to-regexp": ">=8.0.0",
       "cookie": ">=0.7.0",
       "send": ">=0.19.0",
@@ -75,9 +75,9 @@
     ]
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.2",
-    "drizzle-zod": "^0.7.0",
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.8.3",
     "pg": "^8.16.3",
-    "zod": "3.23.8"
+    "zod": "3.25.76"
   }
 }
