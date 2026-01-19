@@ -97,8 +97,8 @@ function isNonEmpty(s: unknown): s is string {
 
 function isFirebaseAppId(appId: string): boolean {
   // Typical web appId format: "1:<senderId>:web:<hex>"
-  // Keep tolerant but protective.
-  return /^1:\d{6,}:(web|ios|android):[A-Za-z0-9]+$/.test(appId);
+  // This project uses a 12-digit senderId (e.g. "665573979824"), so we enforce 12 digits here.
+  return /^1:\d{12}:(web|ios|android):[A-Za-z0-9]+$/.test(appId);
 }
 
 function isDomainLike(domain: string): boolean {
