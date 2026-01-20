@@ -7,6 +7,15 @@ import {
   filmerRequests,
   userProfiles,
 } from "@shared/schema";
+
+vi.mock("../config/env", () => ({
+  env: {
+    NODE_ENV: "test",
+    DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+    SESSION_SECRET: "test-secret-key",
+  },
+}));
+
 import {
   createFilmerRequest,
   FilmerRequestError,
