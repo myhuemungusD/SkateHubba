@@ -295,9 +295,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Select random opponent using cryptographically secure random
-      const randomBytes = crypto.randomBytes(4);
-      const randomIndex = randomBytes.readUInt32BE(0) % eligibleOpponents.length;
+      // Select random opponent using unbiased cryptographically secure random
+      // Use rejection sampling to avoid modulo bias
+      const maxRange = Math.floor(0xffffffff / eligibleOpponents.length) * eligibleOpponents.length;
+      let randomValue: number;
+      do {
+        const randomBytes = crypto.randomBytes(4);
+        randomValue = randomBytes.readUInt32BE(0);
+      } while (randomValue >= maxRange);
+
+      const randomIndex = randomValue % eligibleOpponents.length;
       const opponent = eligibleOpponents[randomIndex];
 
       // In production, you would create a challenge record here
