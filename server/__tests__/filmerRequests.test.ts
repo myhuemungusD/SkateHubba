@@ -289,8 +289,11 @@ describe("filmer request service", () => {
     ]);
     mockDb.setProfiles([{ id: "filmer-1", roles: { filmer: true }, filmerVerified: false }]);
 
+    const today = new Date().toISOString().slice(0, 10);
+
     for (let i = 1; i <= 10; i += 1) {
       mockDb.setCheckIns([{ id: i, userId: "skater-1" }]);
+      mockDb.setRequests([]);
       await createFilmerRequest({
         requesterId: "skater-1",
         requesterTrustLevel: 1,
@@ -301,7 +304,17 @@ describe("filmer request service", () => {
       });
     }
 
+    mockDb.setCounters([
+      {
+        counterKey: "filmer:request:test:skater-1",
+        day: today,
+        count: 10,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
     mockDb.setCheckIns([{ id: 11, userId: "skater-1" }]);
+    mockDb.setRequests([]);
 
     await expect(
       createFilmerRequest({
@@ -402,6 +415,7 @@ describe("filmer request service", () => {
     ]);
     mockDb.setProfiles([{ id: "filmer-1", roles: { filmer: true }, filmerVerified: false }]);
     mockDb.setCheckIns([{ id: 1, userId: "skater-1" }]);
+    mockDb.setRequests([]);
 
     const request = await createFilmerRequest({
       requesterId: "skater-1",
@@ -442,6 +456,7 @@ describe("filmer request service", () => {
     expect(acceptedRequest?.respondedAt).toBeInstanceOf(Date);
 
     mockDb.setCheckIns([{ id: 2, userId: "skater-1" }]);
+    mockDb.setRequests([]);
     const rejectRequest = await createFilmerRequest({
       requesterId: "skater-1",
       requesterTrustLevel: 1,
