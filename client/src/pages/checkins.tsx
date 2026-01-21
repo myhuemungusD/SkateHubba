@@ -9,6 +9,7 @@ import type { CheckInResult } from "../../../shared/checkin-types";
 
 import Navigation from "../components/Navigation";
 import BackgroundCarousel from "../components/BackgroundCarousel";
+import { Footer } from "../components/Footer";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -255,11 +256,9 @@ export default function CheckinsPage() {
             </section>
           )}
 
-          <footer className="mt-24 pb-8 text-center border-t border-zinc-800 pt-12">
-            <p className="text-gray-500 text-sm tracking-widest uppercase">
-              &copy; {new Date().getFullYear()} SkateHubba™ — Built by Jason Hamilton
-            </p>
-          </footer>
+          <div className="mt-24">
+            <Footer />
+          </div>
         </div>
       </div>
     </BackgroundCarousel>

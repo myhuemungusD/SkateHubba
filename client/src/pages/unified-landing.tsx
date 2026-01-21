@@ -14,6 +14,7 @@
 
 import BackgroundCarousel from "../components/BackgroundCarousel";
 import Navigation from "../components/Navigation";
+import { Footer } from "../components/Footer";
 import { HeroSection } from "../sections/landing/HeroSection";
 import { FeatureGrid } from "../sections/landing/FeatureGrid";
 import { landingContent } from "../content/landing";
@@ -35,11 +36,7 @@ export default function UnifiedLanding() {
 
       <FeatureGrid features={landingContent.features} columns={3} />
 
-      <footer className="py-12 text-center border-t border-zinc-800">
-        <p className="text-gray-500 text-sm tracking-widest uppercase">
-          &copy; {new Date().getFullYear()} SkateHubba™ — Built by Jason Hamilton
-        </p>
-      </footer>
+      <Footer />
     </BackgroundCarousel>
   );
 }
