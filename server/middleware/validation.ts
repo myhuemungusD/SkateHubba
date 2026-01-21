@@ -25,6 +25,6 @@ export const validateBody =
       return res.status(status).json(body);
     }
 
-    req.body = parsed.data;
+    (req as Request & { validatedBody: T }).validatedBody = parsed.data;
     return next();
   };
