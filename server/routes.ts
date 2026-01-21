@@ -75,7 +75,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   const enforceWriteQuota = (req: Request) => {
-    const key = req.currentUser?.id ?? getClientIp(req) ?? "unknown";
+    const userId = req.currentUser?.id;
+    const clientIp = getClientIp(req);
+
+    // If we cannot reliably identify the requester by user ID or IP,
+    // do not allow write operations to proceed under a shared "unknown" quota key.
+    if (!userId && !clientIp) {
+      const now = Date.now();
+      return { allowed: false, resetAt: now + WRITE_QUOTA_WINDOW_MS };
+    }
+
+    const key = userId ?? clientIp!;
     const now = Date.now();
     const existing = writeQuotaLedger.get(key);
 
