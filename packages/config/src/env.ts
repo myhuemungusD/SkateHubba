@@ -135,6 +135,18 @@ const firebaseConfig = {
   measurementId: getEnvOptional('EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID'),
 };
 
+export type FirebaseEnv = typeof firebaseConfig;
+
+/**
+ * Get Firebase configuration from environment
+ *
+ * This function is part of the public API and is re-exported from the
+ * package index. It returns the Firebase configuration used to
+ * initialize the Firebase app.
+ */
+export function getFirebaseEnv(): FirebaseEnv {
+  return firebaseConfig;
+}
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 getAnalytics(app);
