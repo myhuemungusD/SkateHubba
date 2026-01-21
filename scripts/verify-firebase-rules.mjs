@@ -8,8 +8,8 @@ import path from "node:path";
 /**
  * Firebase Rules Verification (Enterprise)
  *
- * Modes:
- *  - validate : dry-run rules "release" validation (syntax/compile check on Firebase)
+ * Validates Firebase rules using dry-run deployment.
+ * This checks syntax and compatibility without actually deploying.
  *
  * Env:
  *  - FIREBASE_PROJECT_ID (required)
@@ -21,12 +21,7 @@ import path from "node:path";
  *
  * Usage:
  *  node scripts/verify-firebase-rules.mjs
- *  node scripts/verify-firebase-rules.mjs --mode=validate
  */
-
-const argv = process.argv.slice(2);
-const modeArg = argv.find((a) => a.startsWith("--mode="))?.split("=")[1];
-const mode = (modeArg ?? "validate").toLowerCase();
 
 const projectId = process.env.FIREBASE_PROJECT_ID;
 const token = process.env.FIREBASE_TOKEN;
@@ -129,8 +124,6 @@ function validateRules() {
 
   if (hasFirestoreRules) {
     console.log("  • Firestore rules: validating…");
-    // NOTE: firebase-tools supports --dry-run on deploy; for rules release, behavior can vary.
-    // Using "deploy --only" with --dry-run is the most consistent compile/validation check.
     runFirebase([
       "deploy",
       "--only",
@@ -166,23 +159,7 @@ function validateRules() {
   }
 }
 
-function compareRules() {
-  console.log(`⚠️  Rule comparison skipped - Firebase CLI does not support retrieving deployed rules`);
-  console.log(`   Validation (dry-run) ensures rules are syntactically correct before deployment`);
-}
-
-if (!["both", "validate", "compare"].includes(mode)) {
-  console.error(`❌ Invalid --mode. Use: validate (got: ${mode})`);
-  process.exit(1);
-}
-
-if (mode === "validate") validateRules();
-if (mode === "compare") {
-  console.log("⚠️  Compare mode is not supported - use validate mode instead");
-  compareRules();
-}
-if (mode === "both") {
-  validateRules();
-}
+// Validate rules (dry-run deployment)
+validateRules();
 
 console.log("✅ Firebase rules verification complete.");
