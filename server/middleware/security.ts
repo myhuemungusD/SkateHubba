@@ -237,6 +237,50 @@ export const validateHoneypot = (req: Request, res: Response, next: NextFunction
 };
 
 /**
+ * RFC-compliant email validation (ReDoS-safe)
+ * All regexes are anchored and linear-time.
+ */
+function isValidEmail(input: string): boolean {
+  const email = input.trim();
+
+  // Hard cap first (prevents any expensive processing on huge strings)
+  if (email.length < 3 || email.length > 254) return false;
+
+  // Must contain exactly one "@"
+  const at = email.indexOf("@");
+  if (at <= 0 || at !== email.lastIndexOf("@")) return false;
+
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+
+  // Basic structural rules
+  if (!local || !domain) return false;
+  if (local.length > 64) return false; // RFC-ish practical constraint
+  if (domain.length > 253) return false;
+
+  // Domain must contain a dot and not start/end with dot or hyphen
+  if (!domain.includes(".")) return false;
+  if (domain.startsWith(".") || domain.endsWith(".")) return false;
+
+  // Reject whitespace and control chars cheaply
+  // (regex is simple and anchored; no nested quantifiers)
+  if (/[^\x21-\x7E]/.test(email)) return false; // non-printable ASCII
+  if (email.includes(" ")) return false;
+
+  // Allow common email characters only (simple, anchored, linear-time)
+  // local: letters/digits and these: . _ % + - (no consecutive dots, no leading/trailing dot)
+  if (!/^[A-Za-z0-9._%+-]+$/.test(local)) return false;
+  if (local.startsWith(".") || local.endsWith(".") || local.includes("..")) return false;
+
+  // domain labels: letters/digits/hyphen separated by dots; TLD >= 2
+  if (!/^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(domain)) return false;
+  if (domain.split(".").some((label) => label.length === 0 || label.length > 63)) return false;
+  if (domain.split(".").some((label) => label.startsWith("-") || label.endsWith("-"))) return false;
+
+  return true;
+}
+
+/**
  * Email validation middleware
  * Validates email format and normalizes the email address
  * @param req - Express request object with email in body
@@ -252,28 +296,7 @@ export const validateEmail = (req: Request, res: Response, next: NextFunction) =
 
   const trimmedEmail = email.trim();
 
-  // Simple O(n) email validation without ReDoS-vulnerable regex
-  // Check: length bounds, exactly one @, at least one char before @, at least one dot after @
-  if (trimmedEmail.length < 3 || trimmedEmail.length > 254) {
-    return res.status(400).json({ error: "Please enter a valid email address" });
-  }
-
-  const atIndex = trimmedEmail.indexOf("@");
-  const lastAtIndex = trimmedEmail.lastIndexOf("@");
-
-  // Must have exactly one @ and it can't be first or last
-  if (atIndex < 1 || atIndex !== lastAtIndex || atIndex === trimmedEmail.length - 1) {
-    return res.status(400).json({ error: "Please enter a valid email address" });
-  }
-
-  const domain = trimmedEmail.slice(atIndex + 1);
-  // Domain must have at least one dot and can't start/end with dot
-  if (!domain.includes(".") || domain.startsWith(".") || domain.endsWith(".")) {
-    return res.status(400).json({ error: "Please enter a valid email address" });
-  }
-
-  // No whitespace allowed
-  if (/\s/.test(trimmedEmail)) {
+  if (!isValidEmail(trimmedEmail)) {
     return res.status(400).json({ error: "Please enter a valid email address" });
   }
 
