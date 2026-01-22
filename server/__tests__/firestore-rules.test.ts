@@ -1,8 +1,20 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
 
-const rulesPath = path.join(process.cwd(), "firestore.rules");
+const resolveRulesPath = (fileName: string) => {
+  const candidates = [path.join(process.cwd(), fileName), path.join(process.cwd(), "..", fileName)];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Missing ${fileName} at ${candidates.join(", ")}`);
+};
+
+const rulesPath = resolveRulesPath("firestore.rules");
 const rules = readFileSync(rulesPath, "utf8");
 
 describe("Firestore rules contract", () => {
