@@ -250,10 +250,30 @@ export const validateEmail = (req: Request, res: Response, next: NextFunction) =
     return res.status(400).json({ error: "Email is required" });
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmedEmail = email.trim();
 
-  if (!emailRegex.test(trimmedEmail) || trimmedEmail.length < 3 || trimmedEmail.length > 254) {
+  // Simple O(n) email validation without ReDoS-vulnerable regex
+  // Check: length bounds, exactly one @, at least one char before @, at least one dot after @
+  if (trimmedEmail.length < 3 || trimmedEmail.length > 254) {
+    return res.status(400).json({ error: "Please enter a valid email address" });
+  }
+
+  const atIndex = trimmedEmail.indexOf("@");
+  const lastAtIndex = trimmedEmail.lastIndexOf("@");
+
+  // Must have exactly one @ and it can't be first or last
+  if (atIndex < 1 || atIndex !== lastAtIndex || atIndex === trimmedEmail.length - 1) {
+    return res.status(400).json({ error: "Please enter a valid email address" });
+  }
+
+  const domain = trimmedEmail.slice(atIndex + 1);
+  // Domain must have at least one dot and can't start/end with dot
+  if (!domain.includes(".") || domain.startsWith(".") || domain.endsWith(".")) {
+    return res.status(400).json({ error: "Please enter a valid email address" });
+  }
+
+  // No whitespace allowed
+  if (/\s/.test(trimmedEmail)) {
     return res.status(400).json({ error: "Please enter a valid email address" });
   }
 
