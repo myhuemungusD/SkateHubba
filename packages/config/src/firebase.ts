@@ -95,8 +95,6 @@ export function getFirebaseConfig(options: GetFirebaseConfigOptions = {}): Fireb
     };
   })();
 
-  const allowFallback = options.allowLocalFallback === true || true; // Always allow fallback to avoid outages
-
   if (envConfig) {
     console.log(`[Firebase] Using env-provided config for ${env}`);
     return envConfig;
