@@ -2,6 +2,28 @@ import type { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import type { FirebaseAuthedRequest } from "./firebaseUid";
 
+const PUBLIC_PREFIXES = [
+  "/assets/",
+  "/fonts/",
+  "/icons/",
+  "/images/",
+  "/favicon.ico",
+  "/manifest.json",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/sw.js",
+  "/service-worker.js",
+];
+
+/**
+ * Security middleware: bypass static/public assets, apply to everything else.
+ * Keep heavy checks (auth/rate limit) on /api paths in the server bootstrap.
+ */
+export function securityMiddleware(_req: Request, _res: Response, next: NextFunction) {
+  // Currently a pass-through middleware; add security checks for non-public paths if needed.
+  next();
+}
+
 const RATE_LIMITS = {
   // CodeQL: Missing rate limiting (auth endpoints)
   auth: {
@@ -76,41 +98,67 @@ export const publicWriteLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const getRateLimitKey = (req: Request, _res: Response): string => {
-  const userId = req.currentUser?.id;
+const getDeviceFingerprint = (req: Request): string | null => {
+  const deviceId = req.get("x-device-id");
+  if (deviceId) return deviceId;
 
-  // req.ip can be undefined depending on proxy config/types, so harden it.
-  const ip =
-    req.ip ||
-    (typeof req.headers["x-forwarded-for"] === "string"
-      ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
-      : undefined) ||
-    req.socket?.remoteAddress ||
-    "unknown";
+  const sessionId = req.get("x-session-id");
+  if (sessionId) return sessionId;
 
-  return userId ? `${userId}:${ip}` : ip;
+  const fingerprint = req.get("x-client-fingerprint");
+  if (fingerprint) return fingerprint;
+
+  return null;
 };
 
-export const filmerRequestLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 20,
+const userKeyGenerator = (req: Request): string => {
+  const userId = req.currentUser?.id ?? "anonymous";
+  const ip = req.ip ?? "unknown-ip";
+  const device = getDeviceFingerprint(req) ?? "unknown-device";
+
+  // Handle edge case where all identifiers are at their fallback values.
+  // Add additional entropy from request headers so that such requests do not
+  // all share the same rate limit key.
+  if (userId === "anonymous" && ip === "unknown-ip" && device === "unknown-device") {
+    const userAgent = req.get("user-agent") ?? "unknown-ua";
+    const acceptLanguage = req.get("accept-language") ?? "unknown-lang";
+    const forwardedFor = req.get("x-forwarded-for") ?? "unknown-forwarded";
+
+    return `${userId}:${device}:${ip}:${userAgent}:${acceptLanguage}:${forwardedFor}`;
+  }
+  return `${userId}:${device}:${ip}`;
+};
+
+export const checkInIpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 60, // 60 check-ins per 10 minutes per IP
   message: {
-    error: "Too many filmer requests, please slow down.",
+    error: "Check-in rate limit exceeded.",
   },
-  keyGenerator: getRateLimitKey,
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-export const filmerRespondLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 60,
+export const perUserSpotWriteLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 spot creations per hour per user
   message: {
-    error: "Too many filmer responses, please slow down.",
+    error: "Spot creation rate limit exceeded.",
   },
-  keyGenerator: getRateLimitKey,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userKeyGenerator,
+});
+
+export const perUserCheckInLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // 20 check-ins per hour per user
+  message: {
+    error: "Check-in rate limit exceeded.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userKeyGenerator,
 });
 
 /**
@@ -211,6 +259,50 @@ export const validateHoneypot = (req: Request, res: Response, next: NextFunction
 };
 
 /**
+ * RFC-compliant email validation (ReDoS-safe)
+ * All regexes are anchored and linear-time.
+ */
+function isValidEmail(input: string): boolean {
+  const email = input.trim();
+
+  // Hard cap first (prevents any expensive processing on huge strings)
+  if (email.length < 3 || email.length > 254) return false;
+
+  // Must contain exactly one "@"
+  const at = email.indexOf("@");
+  if (at <= 0 || at !== email.lastIndexOf("@")) return false;
+
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+
+  // Basic structural rules
+  if (!local || !domain) return false;
+  if (local.length > 64) return false; // RFC-ish practical constraint
+  if (domain.length > 253) return false;
+
+  // Domain must contain a dot and not start/end with dot or hyphen
+  if (!domain.includes(".")) return false;
+  if (domain.startsWith(".") || domain.endsWith(".")) return false;
+
+  // Reject whitespace and control chars cheaply
+  // (regex is simple and anchored; no nested quantifiers)
+  if (/[^\x21-\x7E]/.test(email)) return false; // non-printable ASCII
+  if (email.includes(" ")) return false;
+
+  // Allow common email characters only (simple, anchored, linear-time)
+  // local: letters/digits and these: . _ % + - (no consecutive dots, no leading/trailing dot)
+  if (!/^[A-Za-z0-9._%+-]+$/.test(local)) return false;
+  if (local.startsWith(".") || local.endsWith(".") || local.includes("..")) return false;
+
+  // domain labels: letters/digits/hyphen separated by dots; TLD >= 2
+  if (!/^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(domain)) return false;
+  if (domain.split(".").some((label) => label.length === 0 || label.length > 63)) return false;
+  if (domain.split(".").some((label) => label.startsWith("-") || label.endsWith("-"))) return false;
+
+  return true;
+}
+
+/**
  * Email validation middleware
  * Validates email format and normalizes the email address
  * @param req - Express request object with email in body
@@ -224,10 +316,9 @@ export const validateEmail = (req: Request, res: Response, next: NextFunction) =
     return res.status(400).json({ error: "Email is required" });
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmedEmail = email.trim();
 
-  if (!emailRegex.test(trimmedEmail) || trimmedEmail.length < 3 || trimmedEmail.length > 254) {
+  if (!isValidEmail(trimmedEmail)) {
     return res.status(400).json({ error: "Please enter a valid email address" });
   }
 

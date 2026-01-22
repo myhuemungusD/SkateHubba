@@ -68,6 +68,16 @@ It is not hype-driven.
 - `packages/` — shared code (types, config, utilities)
   - `@skatehubba/config` — universal env loader + guardrails
 
+### Archive Policy
+
+\_archive/ is excluded from CI and is not part of the product. See \_archive/README.md for contents, status, and deletion guidance.
+
+### Entrypoints
+
+- Local run: pnpm dev from repo root
+- Deploy: see docs/DEPLOYMENT_RUNBOOK.md`r
+- Production vs experimental: see docs/roadmap.md`r
+
 ---
 
 ## Local Development
@@ -139,6 +149,12 @@ pnpm install
 
 - Firestore is reserved for realtime/presence/feed data.
 - PostgreSQL is the system of record for server-authoritative workflows.
+
+## Public Environment Variables (Web vs Expo)
+
+- **Web (Vite)**: use `VITE_*` as the canonical prefix in Vercel/CI.
+- **Expo (Mobile)**: use `EXPO_PUBLIC_*` as the canonical prefix.
+- The runtime adapter can read both, but builds will fail if required `VITE_*` vars are missing.
 
 ---
 
