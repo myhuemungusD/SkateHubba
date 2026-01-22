@@ -11,7 +11,6 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 if (typeof window !== "undefined") {
-  // @ts-expect-error -- third-party typing mismatch (documented intentional override)
   delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconUrl: markerIcon,
