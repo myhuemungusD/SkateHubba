@@ -19,12 +19,9 @@ const PUBLIC_PREFIXES = [
  * Security middleware: bypass static/public assets, apply to everything else.
  * Keep heavy checks (auth/rate limit) on /api paths in the server bootstrap.
  */
-export function securityMiddleware(req: Request, _res: Response, next: NextFunction) {
-  const path = req.path || "/";
-  if (PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(p))) {
-    return next();
-  }
-  return next();
+export function securityMiddleware(_req: Request, _res: Response, next: NextFunction) {
+  // Currently a pass-through middleware; add security checks for non-public paths if needed.
+  next();
 }
 
 const RATE_LIMITS = {
