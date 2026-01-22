@@ -1,20 +1,33 @@
 import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { useEffect, useState } from 'react';
 import { apiRequest } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { useCart } from "../lib/cart/store";
 import { Link, useLocation } from "wouter";
 import { ShoppingCart, ArrowLeft, Loader2 } from "lucide-react";
-import { getAppConfig } from '@skatehubba/config';
 
-// Make sure to call `loadStripe` outside of a component's render to avoid
-// recreating the `Stripe` object on every render.
-const stripePublicKey = getAppConfig().stripePublicKey;
-if (!stripePublicKey) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+let stripePromise: Promise<Stripe | null> | null = null;
+
+async function getStripePromise(): Promise<Stripe | null> {
+  if (!stripePromise) {
+    stripePromise = (async () => {
+      try {
+        const response = await fetch('/api/stripe-publishable-key');
+        const data = await response.json();
+        if (data.publishableKey) {
+          return loadStripe(data.publishableKey);
+        }
+        console.error('No Stripe publishable key found');
+        return null;
+      } catch (error) {
+        console.error('Failed to fetch Stripe key:', error);
+        return null;
+      }
+    })();
+  }
+  return stripePromise;
 }
-const stripePromise = loadStripe(stripePublicKey);
 
 const CheckoutForm = () => {
   const stripe = useStripe();
@@ -88,12 +101,26 @@ const CheckoutForm = () => {
 export default function Checkout() {
   const [clientSecret, setClientSecret] = useState("");
   const [error, setError] = useState("");
+  const [stripeInstance, setStripeInstance] = useState<Stripe | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(true);
   const { snapshot } = useCart();
   const snap = snapshot();
 
   // Capture items and subtotal once on initial render to avoid re-fetching
   // when cart changes during checkout flow
   const [initialSnap] = useState(() => snap);
+
+  useEffect(() => {
+    getStripePromise()
+      .then((stripe) => {
+        setStripeInstance(stripe);
+        setStripeLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load Stripe:', err);
+        setStripeLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     // Create PaymentIntent as soon as the page loads
@@ -155,13 +182,32 @@ export default function Checkout() {
     );
   }
 
-  if (!clientSecret) {
+  if (stripeLoading || !clientSecret) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-orange-600" />
             <p className="text-gray-400">Initializing secure payment...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!stripeInstance) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
+        <div className="mx-auto max-w-2xl p-6">
+          <div className="text-center py-20">
+            <h1 className="text-2xl font-bold text-red-500 mb-4">Payment Unavailable</h1>
+            <p className="text-gray-400 mb-6">Unable to load payment system. Please try again later.</p>
+            <Link 
+              href="/cart" 
+              className="inline-block bg-orange-600 hover:bg-orange-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              Back to Cart
+            </Link>
           </div>
         </div>
       </main>
@@ -207,7 +253,7 @@ export default function Checkout() {
         </div>
 
         {/* Payment Form */}
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <Elements stripe={stripeInstance} options={{ clientSecret }}>
           <CheckoutForm />
         </Elements>
 

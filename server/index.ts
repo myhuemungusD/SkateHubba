@@ -12,6 +12,7 @@ import logger from "./logger.ts";
 import { ensureCsrfToken, requireCsrfToken } from "./middleware/csrf.ts";
 import { apiLimiter, staticFileLimiter } from "./middleware/security.ts";
 import { initializeSocketServer, shutdownSocketServer, getSocketStats } from "./socket/index.ts";
+import { initStripe, paymentRoutes, WebhookHandlers } from "./stripe/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +62,35 @@ app.use(cors(corsOptions));
 // Compression
 app.use(compression());
 
+// Stripe webhook route MUST be registered BEFORE express.json()
+// Webhook needs raw Buffer, not parsed JSON
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing stripe-signature' });
+    }
+
+    try {
+      const sig = Array.isArray(signature) ? signature[0] : signature;
+
+      if (!Buffer.isBuffer(req.body)) {
+        console.error('STRIPE WEBHOOK ERROR: req.body is not a Buffer');
+        return res.status(500).json({ error: 'Webhook processing error' });
+      }
+
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook error:', error.message);
+      res.status(400).json({ error: 'Webhook processing error' });
+    }
+  }
+);
+
 // Body parsing (before CSRF to enable JSON/form requests)
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -82,6 +112,12 @@ app.use("/api", apiLimiter);
 
 // Global CSRF validation for all state-changing API requests
 app.use("/api", requireCsrfToken);
+
+// Initialize Stripe (creates schema, sets up webhooks, syncs data)
+await initStripe();
+
+// Register Stripe payment routes
+app.use("/api", paymentRoutes);
 
 // Register all API routes
 await registerRoutes(app);
