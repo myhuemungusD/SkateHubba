@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { registerRoutes } from "./routes.ts";
 import { setupVite, log } from "./vite-dev.ts";
@@ -109,12 +110,47 @@ app.get("/api/health", (_req, res) => {
 if (process.env.NODE_ENV === "development") {
   await setupVite(app, server);
 } else {
-  const publicDir = path.resolve(__dirname, "../public");
-  app.use(express.static(publicDir));
+  const clientDistCandidates = [
+    path.resolve(__dirname, "../client/dist"),
+    path.resolve(__dirname, "../../client/dist"),
+  ];
+  const publicCandidates = [
+    path.resolve(__dirname, "../public"),
+    path.resolve(__dirname, "../../public"),
+  ];
+
+  const staticDirs = [...clientDistCandidates, ...publicCandidates].filter((dir) =>
+    fs.existsSync(dir)
+  );
+
+  // Serve built SPA assets first, fall back to shared public assets
+  for (const dir of staticDirs) {
+    app.use(express.static(dir));
+  }
+
+  const indexHtmlPath = (() => {
+    for (const base of clientDistCandidates) {
+      const candidate = path.join(base, "index.html");
+      if (fs.existsSync(candidate)) return candidate;
+    }
+
+    for (const base of publicCandidates) {
+      const candidate = path.join(base, "index.html");
+      if (fs.existsSync(candidate)) return candidate;
+    }
+
+    return null;
+  })();
+
   // Rate limit HTML serving to prevent file system abuse
   // CodeQL: Missing rate limiting - file system access now rate-limited
   app.get("*", staticFileLimiter, (_req, res) => {
-    res.sendFile(path.join(publicDir, "index.html"));
+    if (indexHtmlPath) {
+      return res.sendFile(indexHtmlPath);
+    }
+
+    logger.error("No SPA index.html found in client/dist or public");
+    return res.status(500).send("App build missing: index.html not found");
   });
 }
 
