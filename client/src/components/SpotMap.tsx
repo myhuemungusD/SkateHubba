@@ -1,11 +1,11 @@
-import { useEffect, useRef, useMemo, useState, memo } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useRef, useMemo, useState, memo } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 // Fix for default marker icons in Leaflet with Vite
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 // @ts-expect-error -- third-party typing mismatch (documented intentional override)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -20,7 +20,7 @@ interface Spot {
   name: string;
   lat: number;
   lng: number;
-  proximity?: 'here' | 'nearby' | 'far' | null;
+  proximity?: "here" | "nearby" | "far" | null;
   distance?: number | null;
 }
 
@@ -39,7 +39,14 @@ interface SpotMapProps {
   onMapClick?: (lat: number, lng: number) => void;
 }
 
-export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpotId, onSelectSpot, addSpotMode = false, onMapClick }: SpotMapProps) {
+export const SpotMap = memo(function SpotMap({
+  spots,
+  userLocation,
+  selectedSpotId,
+  onSelectSpot,
+  addSpotMode = false,
+  onMapClick,
+}: SpotMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const spotMarkersRef = useRef<Map<number, L.Marker>>(new Map());
@@ -48,13 +55,18 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
   const accuracyCircleRef = useRef<L.Circle | null>(null);
   const hasCenteredRef = useRef(false); // Track if we've centered on user location
   const tempMarkerRef = useRef<L.Marker | null>(null);
+  const initialCenterRef = useRef<[number, number]>(
+    userLocation ? [userLocation.lat, userLocation.lng] : [40.7589, -73.9851]
+  );
+  const initialZoomRef = useRef(userLocation ? 15 : 12);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
 
   // ELON AUDIT FIX: Flyweight Pattern
   // Create icons ONCE. Don't allocate 1000 objects every render frame.
   const icons = useMemo(() => {
-    const createIcon = (colorClass: string) => L.divIcon({
-      html: `
+    const createIcon = (colorClass: string) =>
+      L.divIcon({
+        html: `
         <div class="relative" role="img" aria-label="Skate spot marker">
           <div class="w-8 h-8 rounded-full ${colorClass} flex items-center justify-center shadow-lg">
             <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -64,17 +76,17 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
           </div>
         </div>
       `,
-      className: 'custom-spot-marker',
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32],
-    });
+        className: "custom-spot-marker",
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
 
     return {
-      here: createIcon('bg-success ring-4 ring-success/30'),
-      nearby: createIcon('bg-orange-500 ring-4 ring-orange-500/30'),
-      far: createIcon('bg-[#ff6a00] ring-4 ring-[#ff6a00]/30'),
-      default: createIcon('bg-[#ff6a00] ring-4 ring-[#ff6a00]/30'),
+      here: createIcon("bg-success ring-4 ring-success/30"),
+      nearby: createIcon("bg-orange-500 ring-4 ring-orange-500/30"),
+      far: createIcon("bg-[#ff6a00] ring-4 ring-[#ff6a00]/30"),
+      default: createIcon("bg-[#ff6a00] ring-4 ring-[#ff6a00]/30"),
     };
   }, []);
 
@@ -85,15 +97,16 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
     try {
       // Create map instance with default view
       const map = L.map(mapContainerRef.current, {
-        center: userLocation ? [userLocation.lat, userLocation.lng] : [40.7589, -73.9851], // NYC default
-        zoom: userLocation ? 15 : 12,
+        center: initialCenterRef.current, // NYC default
+        zoom: initialZoomRef.current,
         scrollWheelZoom: true,
         zoomControl: true,
       });
 
       // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map);
 
@@ -101,36 +114,43 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
 
       // ELON AUDIT FIX: Viewport Culling
       // Only render what the user can see.
-      map.on('moveend', () => setBounds(map.getBounds()));
+      map.on("moveend", () => setBounds(map.getBounds()));
       setBounds(map.getBounds());
 
       setTimeout(() => {
         map.invalidateSize();
       }, 100);
     } catch (error) {
-      console.error('Failed to initialize map:', error);
+      console.error("Failed to initialize map:", error);
     }
+
+    const spotMarkers = spotMarkersRef.current;
+    const markerProximity = markerProximityRef.current;
+    const userMarker = userMarkerRef.current;
+    const accuracyCircle = accuracyCircleRef.current;
+    const map = mapInstanceRef.current;
 
     // Cleanup only on unmount
     return () => {
-      spotMarkersRef.current.forEach(marker => marker.remove());
-      spotMarkersRef.current.clear();
-      markerProximityRef.current.clear();
-      
-      if (userMarkerRef.current) {
-        userMarkerRef.current.remove();
-        userMarkerRef.current = null;
+      spotMarkers.forEach((marker) => marker.remove());
+      spotMarkers.clear();
+      markerProximity.clear();
+
+      if (userMarker) {
+        userMarker.remove();
       }
-      
-      if (accuracyCircleRef.current) {
-        accuracyCircleRef.current.remove();
-        accuracyCircleRef.current = null;
+
+      if (accuracyCircle) {
+        accuracyCircle.remove();
       }
-      
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+
+      if (map) {
+        map.remove();
       }
+
+      userMarkerRef.current = null;
+      accuracyCircleRef.current = null;
+      mapInstanceRef.current = null;
     };
   }, []); // Empty dependency array - only run once
 
@@ -140,7 +160,7 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
     if (!bounds) return [];
     // Add 20% buffer so markers don't "pop" in at the very edge
     const paddedBounds = bounds.pad(0.2);
-    return spots.filter(spot => paddedBounds.contains([spot.lat, spot.lng]));
+    return spots.filter((spot) => paddedBounds.contains([spot.lat, spot.lng]));
   }, [spots, bounds]);
 
   // Update spot markers when VISIBLE spots change
@@ -148,9 +168,9 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
     if (!mapInstanceRef.current) return;
 
     const map = mapInstanceRef.current;
-    
+
     // Remove markers that no longer exist
-    const currentSpotIds = new Set(visibleSpots.map(s => s.id));
+    const currentSpotIds = new Set(visibleSpots.map((s) => s.id));
     spotMarkersRef.current.forEach((marker, id) => {
       if (!currentSpotIds.has(id)) {
         marker.remove();
@@ -160,13 +180,13 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
     });
 
     // Add or update spot markers
-    visibleSpots.forEach(spot => {
+    visibleSpots.forEach((spot) => {
       let marker = spotMarkersRef.current.get(spot.id);
-      
+
       // Determine which cached icon to use
-      const proximityKey = spot.proximity || 'default';
+      const proximityKey = spot.proximity || "default";
       const icon = icons[proximityKey as keyof typeof icons] || icons.default;
-      
+
       // Check if visual state actually changed
       const currentProximity = markerProximityRef.current.get(spot.id);
       const needsIconUpdate = currentProximity !== proximityKey;
@@ -175,15 +195,15 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
         // Create new marker with title for accessibility (tooltip + screen reader)
         marker = L.marker([spot.lat, spot.lng], { icon, title: spot.name })
           .addTo(map)
-          .on('click', () => onSelectSpot(spot.id));
-        
+          .on("click", () => onSelectSpot(spot.id));
+
         marker.bindPopup(`<div class="font-semibold">${spot.name}</div>`);
         spotMarkersRef.current.set(spot.id, marker);
         markerProximityRef.current.set(spot.id, proximityKey);
       } else {
         // Update position (cheap)
         marker.setLatLng([spot.lat, spot.lng]);
-        
+
         // Update icon ONLY if changed (expensive DOM op)
         if (needsIconUpdate) {
           marker.setIcon(icon);
@@ -210,7 +230,7 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
               </div>
             </div>
           `,
-          className: 'custom-user-marker',
+          className: "custom-user-marker",
           iconSize: [40, 40],
           iconAnchor: [20, 20],
         });
@@ -226,8 +246,8 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
       if (!accuracyCircleRef.current && userLocation.accuracy) {
         accuracyCircleRef.current = L.circle([userLocation.lat, userLocation.lng], {
           radius: Math.max(30, userLocation.accuracy),
-          color: '#3b82f6',
-          fillColor: '#3b82f6',
+          color: "#3b82f6",
+          fillColor: "#3b82f6",
           fillOpacity: 0.1,
           weight: 1,
         }).addTo(map);
@@ -290,10 +310,10 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
                 </div>
               </div>
             `,
-            className: '',
+            className: "",
             iconSize: [40, 40],
             iconAnchor: [20, 20],
-          })
+          }),
         }).addTo(map);
 
         tempMarkerRef.current = tempMarker;
@@ -302,12 +322,12 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
     };
 
     if (addSpotMode) {
-      map.on('click', handleMapClick);
-      map.getContainer().style.cursor = 'crosshair';
+      map.on("click", handleMapClick);
+      map.getContainer().style.cursor = "crosshair";
     } else {
-      map.off('click', handleMapClick);
-      map.getContainer().style.cursor = '';
-      
+      map.off("click", handleMapClick);
+      map.getContainer().style.cursor = "";
+
       // Remove temp marker when exiting add mode
       if (tempMarkerRef.current) {
         tempMarkerRef.current.remove();
@@ -316,15 +336,15 @@ export const SpotMap = memo(function SpotMap({ spots, userLocation, selectedSpot
     }
 
     return () => {
-      map.off('click', handleMapClick);
+      map.off("click", handleMapClick);
     };
   }, [addSpotMode, onMapClick]);
 
   return (
-    <div 
-      ref={mapContainerRef} 
+    <div
+      ref={mapContainerRef}
       className="w-full h-full bg-gray-900"
-      style={{ minHeight: '100%' }}
+      style={{ minHeight: "100%" }}
       data-testid="map-container"
     />
   );
