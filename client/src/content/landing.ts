@@ -7,13 +7,13 @@ export const landingContent = {
       variant: "success" as const,
     },
     eyebrow: "The Future of Competitive Skateboarding",
-    title: "Master Every Session.",
-    subtitle: "Compete Anywhere.",
+    title: "Own Your Tricks.",
+    subtitle: "Play SKATE Anywhere.",
     description:
-      "The premier platform for remote S.K.A.T.E. battles, spot documentation, and competitive rankings. Built by skaters, for skaters.",
+      "The ultimate mobile skateboarding platform where every clip, spot, and session tells a story.",
     primaryCTA: {
-      text: "Get Started",
-      href: "/signin",
+      text: "Sign In / Sign Up",
+      href: "/auth",
     },
     secondaryCTA: {
       text: "Watch Demo",

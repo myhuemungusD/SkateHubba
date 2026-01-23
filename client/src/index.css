@@ -573,7 +573,7 @@ a:focus-visible {
 }
 
 .graffiti-bg {
-  background-image: url('/attached_assets/hubbagraffwall.png');
+  background-image: url('/images/backgrounds/hubbagraffwall.png');
 }
 
 /* Dynamic Viewport Height - Mobile Safari Safe */
