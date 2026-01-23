@@ -13,11 +13,18 @@
 
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import * as path from "path";
+import * as os from "os";
+import * as fs from "fs";
+import ffmpeg from "fluent-ffmpeg";
+import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 
 // Initialize Firebase Admin if not already done
 if (!admin.apps.length) {
   admin.initializeApp();
 }
+
+ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
 // Valid roles that can be assigned
 const VALID_ROLES = ["admin", "moderator", "verified_pro"] as const;
@@ -455,3 +462,51 @@ export const createProfile = functions.https.onCall(
     };
   }
 );
+
+// ============================================================================
+// Video Validation (Storage Trigger)
+// ============================================================================
+
+export const validateChallengeVideo = functions.storage.object().onFinalize(async (object) => {
+  const filePath = object.name;
+  if (!filePath || !filePath.startsWith("challenges/")) {
+    return;
+  }
+
+  if (object.contentType && !object.contentType.startsWith("video/")) {
+    return;
+  }
+
+  const bucket = admin.storage().bucket(object.bucket);
+  const file = bucket.file(filePath);
+  const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
+
+  try {
+    await file.download({ destination: tempFilePath });
+
+    const duration = await new Promise<number>((resolve, reject) => {
+      ffmpeg.ffprobe(tempFilePath, (err, metadata) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(metadata?.format?.duration ?? 0);
+      });
+    });
+
+    if (duration < 14.5 || duration > 15.5) {
+      await file.delete();
+      console.warn(
+        `[validateChallengeVideo] Deleted invalid clip ${filePath} (duration ${duration}s)`
+      );
+    }
+  } catch (error) {
+    console.error("[validateChallengeVideo] Failed to validate clip:", filePath, error);
+  } finally {
+    try {
+      fs.unlinkSync(tempFilePath);
+    } catch {
+      // Ignore temp cleanup errors
+    }
+  }
+});
