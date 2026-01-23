@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthProvider";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -16,14 +16,39 @@ export default function SigninPage() {
   const auth = useAuth();
   const [, setLocation] = useLocation();
 
+  // Parse ?next= param for redirect after login
+  const getNextUrl = useCallback((): string => {
+    if (typeof window === "undefined") return "/home";
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
+    if (next) {
+      try {
+        const decoded = decodeURIComponent(next);
+        // Security: only allow relative paths
+        if (decoded.startsWith("/") && !decoded.startsWith("//")) {
+          return decoded;
+        }
+      } catch {
+        // Invalid encoding
+      }
+    }
+    return "/home";
+  }, []);
+
   // Redirect if already authenticated and has profile
   useEffect(() => {
     if (auth?.isAuthenticated && auth?.profile) {
-      setLocation("/home");
+      setLocation(getNextUrl());
     } else if (auth?.isAuthenticated && !auth?.profile) {
-      setLocation("/profile-setup");
+      // Preserve next param when redirecting to profile setup
+      const nextUrl = getNextUrl();
+      const setupUrl =
+        nextUrl !== "/home"
+          ? `/profile/setup?next=${encodeURIComponent(nextUrl)}`
+          : "/profile/setup";
+      setLocation(setupUrl);
     }
-  }, [auth?.isAuthenticated, auth?.profile, setLocation]);
+  }, [auth?.isAuthenticated, auth?.profile, setLocation, getNextUrl]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -33,18 +58,23 @@ export default function SigninPage() {
       await auth?.signInWithEmail(email, password);
       // AuthProvider will auto-create profile, wait a bit then check
       setTimeout(() => {
+        const nextUrl = getNextUrl();
         if (auth?.profile) {
           toast({
             title: "Welcome back! 🛹",
             description: "You've successfully signed in.",
           });
-          setLocation("/home");
+          setLocation(nextUrl);
         } else {
           toast({
             title: "Welcome back! 🛹",
             description: "Let's complete your profile.",
           });
-          setLocation("/profile-setup");
+          const setupUrl =
+            nextUrl !== "/home"
+              ? `/profile/setup?next=${encodeURIComponent(nextUrl)}`
+              : "/profile/setup";
+          setLocation(setupUrl);
         }
       }, 500);
     } catch (err: unknown) {
@@ -66,18 +96,23 @@ export default function SigninPage() {
       await auth?.signInWithGoogle();
       // AuthProvider will auto-create profile, wait a bit then check
       setTimeout(() => {
+        const nextUrl = getNextUrl();
         if (auth?.profile) {
           toast({
             title: "Welcome! 🛹",
             description: "You've successfully signed in with Google.",
           });
-          setLocation("/home");
+          setLocation(nextUrl);
         } else {
           toast({
             title: "Welcome! 🛹",
             description: "Let's complete your profile.",
           });
-          setLocation("/profile-setup");
+          const setupUrl =
+            nextUrl !== "/home"
+              ? `/profile/setup?next=${encodeURIComponent(nextUrl)}`
+              : "/profile/setup";
+          setLocation(setupUrl);
         }
       }, 500);
     } catch (err: unknown) {
