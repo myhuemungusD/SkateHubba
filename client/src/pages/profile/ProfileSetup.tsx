@@ -159,7 +159,8 @@ export default function ProfileSetup() {
         // Ignore stale responses
         if (seq !== usernameCheckSeqRef.current) return;
 
-        setUsernameStatus("invalid");
+        // Network or server issue - allow submit, but show warning
+        setUsernameStatus("idle");
         setUsernameMessage("Could not verify username right now.");
       }
     }, 500);
