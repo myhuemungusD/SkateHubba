@@ -3,7 +3,7 @@ import { Shield, Zap, Globe2, Trophy, MapPin, TrendingUp } from "lucide-react";
 export const landingContent = {
   hero: {
     badge: {
-      text: "Now Available • Join the Beta",
+      text: "Now Available - Join the Beta",
       variant: "success" as const,
     },
     eyebrow: "The Future of Competitive Skateboarding",
@@ -15,10 +15,8 @@ export const landingContent = {
       text: "Sign In / Sign Up",
       href: "/auth",
     },
-    secondaryCTA: {
-      text: "Watch Demo",
-      href: "/demo",
-    },
+    // Explicitly indicate that there is currently no secondary CTA on the hero section.
+    secondaryCTA: null,
   },
   trustIndicators: [
     {
