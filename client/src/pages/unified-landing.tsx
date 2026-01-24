@@ -13,7 +13,8 @@
  *
  * Behavior:
  * - Unauthenticated: Show landing page (no app shell)
- * - Authenticated: Redirect to /home
+ * - Authenticated with profile: Redirect to /home
+ * - Authenticated without profile: Redirect to profile setup
  */
 
 import { useEffect } from "react";
@@ -30,12 +31,17 @@ export default function UnifiedLanding() {
   const auth = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect authenticated users without profiles to setup
+  // Redirect authenticated users based on profile status
   useEffect(() => {
     if (auth.loading) return;
 
     if (auth.isAuthenticated && auth.profileStatus === "missing") {
-      setLocation("/profile/setup?next=/landing", { replace: true });
+      setLocation("/profile/setup?next=/home", { replace: true });
+      return;
+    }
+
+    if (auth.isAuthenticated && auth.profileStatus === "exists") {
+      setLocation("/home", { replace: true });
     }
   }, [auth.isAuthenticated, auth.profileStatus, auth.loading, setLocation]);
 
