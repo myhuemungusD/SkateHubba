@@ -268,11 +268,19 @@ function AppShellSettingsRoute() {
   );
 }
 
+function isE2EBypass(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.location.hostname !== "localhost") return false;
+  return window.sessionStorage.getItem("e2eAuthBypass") === "true";
+}
+
 function ProfileSetupRoute() {
   const auth = useAuth();
   const [, setLocation] = useLocation();
+  const bypass = isE2EBypass();
 
   useEffect(() => {
+    if (bypass) return;
     if (!auth.isAuthenticated) {
       setLocation("/login", { replace: true });
       return;
@@ -281,9 +289,9 @@ function ProfileSetupRoute() {
     if (auth.profileStatus === "exists") {
       setLocation("/home", { replace: true });
     }
-  }, [auth.isAuthenticated, auth.profileStatus, setLocation]);
+  }, [auth.isAuthenticated, auth.profileStatus, bypass, setLocation]);
 
-  if (auth.loading || auth.profileStatus === "unknown") {
+  if (!bypass && (auth.loading || auth.profileStatus === "unknown")) {
     return <LoadingScreen />;
   }
 

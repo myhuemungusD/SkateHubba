@@ -14,6 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --config ../vitest.config.mts --dir . --passWithNoTests",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
     "build": "pnpm run typecheck && vite build",
     "preview": "vite preview"
   },

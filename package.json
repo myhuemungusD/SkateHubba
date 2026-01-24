@@ -16,6 +16,7 @@
     "package:dist": "node scripts/assemble-dist.mjs",
     "lint": "turbo lint",
     "typecheck": "pnpm -r run typecheck",
+    "e2e:client": "pnpm -C client cypress:run",
     "verify:public-env": "node scripts/verify-public-env.mjs",
     "verify": "pnpm -w run typecheck && pnpm -w run lint && pnpm -w run test && pnpm -w run build",
     "test": "turbo test",

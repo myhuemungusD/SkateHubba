@@ -6,7 +6,7 @@ describe("CTA flow", () => {
     cy.location("pathname").should("eq", "/auth");
 
     cy.contains("Sign Up").click();
-    cy.get("#signup-firstName").should("be.visible");
+    cy.get("#firstName").should("be.visible");
 
     cy.contains("Sign In").click();
     cy.get("#signin-email").should("be.visible");
@@ -17,5 +17,20 @@ describe("CTA flow", () => {
 
     cy.get('[data-testid="link-back-home"]').should("be.visible").click();
     cy.location("pathname").should("eq", "/");
+
+    cy.visit("/profile/setup?next=/home", {
+      onBeforeLoad(win) {
+        win.sessionStorage.setItem("e2eAuthBypass", "true");
+      },
+    });
+    cy.get('[data-testid="profile-username"]').should("be.visible");
+    cy.get('[data-testid="profile-submit"]').should("be.visible");
+
+    cy.visit("/feed", {
+      onBeforeLoad(win) {
+        win.sessionStorage.setItem("e2eAuthBypass", "true");
+      },
+    });
+    cy.location("pathname").should("eq", "/feed");
   });
 });
