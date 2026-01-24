@@ -343,7 +343,7 @@ export default function ProfileSetup() {
         setSubmitting(false);
       }
     },
-    [auth, setLocation, getNextUrl]
+    [auth, setLocation, getNextUrl, checkUsernameAvailability, usernameStatus]
   );
 
   const onSubmit = useCallback(
@@ -394,6 +394,7 @@ export default function ProfileSetup() {
             <div className="flex flex-col gap-2 md:flex-row md:items-center">
               <Input
                 id="username"
+                data-testid="profile-username"
                 placeholder="skatelegend"
                 className="h-12 bg-neutral-900/60 border-neutral-700 text-white"
                 {...register("username", {
@@ -505,6 +506,7 @@ export default function ProfileSetup() {
               type="submit"
               className="h-12 w-full bg-yellow-500 text-black hover:bg-yellow-400 md:w-auto"
               disabled={submitDisabled}
+              data-testid="profile-submit"
             >
               {submitting ? "Creating profile..." : "Create profile"}
             </Button>
@@ -515,6 +517,7 @@ export default function ProfileSetup() {
               className="h-12 w-full text-neutral-300 hover:bg-white/5 md:w-auto"
               onClick={handleSkip}
               disabled={submitting}
+              data-testid="profile-skip"
             >
               Skip for now
             </Button>
