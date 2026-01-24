@@ -16,7 +16,8 @@ import * as admin from "firebase-admin";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
-import ffmpeg from "fluent-ffmpeg";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 
 // Initialize Firebase Admin if not already done
@@ -24,7 +25,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-ffmpeg.setFfprobePath(ffprobeInstaller.path);
+const execFileAsync = promisify(execFile);
 
 // Valid roles that can be assigned
 const VALID_ROLES = ["admin", "moderator", "verified_pro"] as const;
@@ -337,18 +338,18 @@ export const validateChallengeVideo = functions.storage.object().onFinalize(asyn
   try {
     await file.download({ destination: tempFilePath });
 
-    const duration = await new Promise<number>((resolve, reject) => {
-      ffmpeg.ffprobe(
-        tempFilePath,
-        (err: Error | null, metadata: { format?: { duration?: number } }) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve(metadata?.format?.duration ?? 0);
-        }
-      );
-    });
+    // Use ffprobe to extract video duration
+    const { stdout } = await execFileAsync(ffprobeInstaller.path, [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1:nokey=1",
+      tempFilePath,
+    ]);
+
+    const duration = parseFloat(stdout.trim());
 
     if (duration < 14.5 || duration > 15.5) {
       await file.delete();
