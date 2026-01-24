@@ -128,7 +128,7 @@ export default function LocationPicker({ onLocationSelect, initialLocation }: Lo
         const { latitude, longitude } = position.coords;
         handleLocationClick(latitude, longitude);
         toast({
-          title: "Location found! 📍",
+          title: "Location found! ",
           description: "Your current location has been set.",
         });
         setIsGettingLocation(false);
@@ -174,7 +174,7 @@ export default function LocationPicker({ onLocationSelect, initialLocation }: Lo
 
     handleLocationClick(lat, lng);
     toast({
-      title: "Location updated! 📍",
+      title: "Location updated! ",
       description: "Coordinates have been set manually.",
     });
   };

@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <aside className="fixed left-0 top-0 h-full w-64 border-r border-neutral-800 bg-neutral-900/50 backdrop-blur-sm z-40">
           <div className="p-6">
             <Link href="/feed" className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-yellow-400">🛹 SkateHubba</span>
+              <span className="text-2xl font-bold text-yellow-400"> SkateHubba</span>
             </Link>
           </div>
           <nav className="px-4 py-2" role="navigation" aria-label="Main navigation">
@@ -60,9 +60,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main content area */}
         <main className="flex-1 ml-64">
           <div className="min-h-screen">
-            <div className="mx-auto max-w-4xl px-6 py-8">
-              {children}
-            </div>
+            <div className="mx-auto max-w-4xl px-6 py-8">{children}</div>
           </div>
         </main>
       </div>
@@ -73,9 +71,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col">
       <main className="flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="mx-auto w-full max-w-md px-4 pt-4">
-          {children}
-        </div>
+        <div className="mx-auto w-full max-w-md px-4 pt-4">{children}</div>
       </main>
       <nav
         className="fixed bottom-0 left-0 right-0 border-t border-neutral-800 bg-neutral-950/95 pb-[env(safe-area-inset-bottom)]"
@@ -92,9 +88,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 key={item.href}
                 href={item.href}
                 className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors ${
-                  isActive
-                    ? "text-yellow-400"
-                    : "text-neutral-400 hover:text-white"
+                  isActive ? "text-yellow-400" : "text-neutral-400 hover:text-white"
                 }`}
                 aria-current={isActive ? "page" : undefined}
               >

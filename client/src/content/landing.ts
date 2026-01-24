@@ -3,21 +3,23 @@ import { Shield, Zap, Globe2, Trophy, MapPin, TrendingUp } from "lucide-react";
 export const landingContent = {
   hero: {
     badge: {
-      text: "Now Available • Join the Beta",
+      text: "Now Available - Join the Beta",
       variant: "success" as const,
     },
     eyebrow: "The Future of Competitive Skateboarding",
-    title: "Own Your Tricks.",
+    title: "Own the Spot.",
     subtitle: "Play SKATE Anywhere.",
     description:
       "The ultimate mobile skateboarding platform where every clip, spot, and session tells a story.",
     primaryCTA: {
       text: "Sign In / Sign Up",
       href: "/auth",
+      testId: "cta-landing-primary",
     },
     secondaryCTA: {
-      text: "Watch Demo",
-      href: "/demo",
+      text: "Learn More",
+      href: "/specs",
+      testId: "cta-landing-secondary",
     },
   },
   trustIndicators: [

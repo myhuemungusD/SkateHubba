@@ -77,7 +77,7 @@ export default function ChallengeLobby() {
     },
     onSuccess: (data) => {
       toast({
-        title: "⚡ Match Found!",
+        title: " Match Found!",
         description: `Matched with ${data.match.opponentName}. Starting challenge...`,
       });
 
@@ -169,7 +169,7 @@ export default function ChallengeLobby() {
                       </span>
                     </div>
                     <div className="text-xs text-neutral-400">
-                      {skater.handle} · {skater.style}
+                      {skater.handle} {skater.style}
                     </div>
                     <div className="text-xs text-neutral-500">Win rate {skater.winRate}</div>
                   </div>

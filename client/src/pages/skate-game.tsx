@@ -2,38 +2,24 @@ import { useMemo } from "react";
 import { Crown, Shield, Swords, Loader2, AlertCircle, Trophy, Skull } from "lucide-react";
 import MobileLayout from "../components/layout/MobileLayout";
 import { useSkateGame } from "../hooks/useSkateGame";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import { Button } from "../components/ui/button";
 
 const fullWord = ["S", "K", "A", "T", "E"];
 
 export default function SkateGamePage() {
   const { user } = useAuth();
-  
+
   // Extract gameId from URL query params
   const gameId = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("gameId");
   }, []);
 
-  const { 
-    game, 
-    isLoading, 
-    error, 
-    submitMove, 
-    isMovePending,
-    getGameState 
-  } = useSkateGame(gameId);
+  const { game, isLoading, error, submitMove, isMovePending, getGameState } = useSkateGame(gameId);
 
-  const { 
-    isMyTurn, 
-    isOffense, 
-    myLetters, 
-    oppLetters, 
-    opponentName,
-    isGameOver,
-    iWon
-  } = getGameState(user?.uid);
+  const { isMyTurn, isOffense, myLetters, oppLetters, opponentName, isGameOver, iWon } =
+    getGameState(user?.uid);
 
   // --- Loading State ---
   if (isLoading) {
@@ -55,7 +41,7 @@ export default function SkateGamePage() {
           <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
           <h2 className="mb-2 text-xl font-bold">Game Not Found</h2>
           <p className="mb-6 text-neutral-400">This game might have ended or doesn't exist.</p>
-          <Button onClick={() => window.location.href = '/game'} variant="outline">
+          <Button onClick={() => (window.location.href = "/game")} variant="outline">
             Return to Lobby
           </Button>
         </div>
@@ -71,18 +57,25 @@ export default function SkateGamePage() {
           {iWon ? (
             <div className="animate-in zoom-in duration-500">
               <Trophy className="mx-auto mb-6 h-24 w-24 text-yellow-500" />
-              <h1 className="mb-2 text-4xl font-black uppercase tracking-tighter text-yellow-500">Victory!</h1>
+              <h1 className="mb-2 text-4xl font-black uppercase tracking-tighter text-yellow-500">
+                Victory!
+              </h1>
               <p className="text-lg text-neutral-300">You crushed {opponentName}.</p>
             </div>
           ) : (
             <div className="animate-in zoom-in duration-500">
               <Skull className="mx-auto mb-6 h-24 w-24 text-neutral-600" />
-              <h1 className="mb-2 text-4xl font-black uppercase tracking-tighter text-neutral-500">Defeat</h1>
+              <h1 className="mb-2 text-4xl font-black uppercase tracking-tighter text-neutral-500">
+                Defeat
+              </h1>
               <p className="text-lg text-neutral-400">{opponentName} took the W.</p>
             </div>
           )}
           <div className="mt-12 flex gap-4">
-            <Button onClick={() => window.location.href = '/game'} className="bg-white text-black hover:bg-neutral-200">
+            <Button
+              onClick={() => (window.location.href = "/game")}
+              className="bg-white text-black hover:bg-neutral-200"
+            >
               Back to Lobby
             </Button>
           </div>
@@ -96,22 +89,21 @@ export default function SkateGamePage() {
     // In a real app, this would open a modal to select/name the trick
     const trickName = prompt("Name your trick:");
     if (trickName) {
-      submitMove({ type: 'set', trickName });
+      submitMove({ type: "set", trickName });
     }
   };
 
   const handleBail = () => {
-    submitMove({ type: 'bail' });
+    submitMove({ type: "bail" });
   };
 
   const handleLand = () => {
-    submitMove({ type: 'land' });
+    submitMove({ type: "land" });
   };
 
   return (
     <MobileLayout>
       <div className="min-h-screen bg-neutral-950 px-4 pb-10 pt-6 text-white">
-        
         {/* Header */}
         <header className="mb-6 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 shadow-[0_0_24px_rgba(0,0,0,0.4)] backdrop-blur">
           <div>
@@ -119,11 +111,13 @@ export default function SkateGamePage() {
             <h1 className="text-lg font-semibold tracking-tight">S.K.A.T.E.</h1>
             <p className="text-xs text-neutral-400">vs {opponentName || "Opponent"}</p>
           </div>
-          <div className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
-            isMyTurn 
-              ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-200 animate-pulse" 
-              : "border-neutral-700 bg-neutral-800 text-neutral-400"
-          }`}>
+          <div
+            className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
+              isMyTurn
+                ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-200 animate-pulse"
+                : "border-neutral-700 bg-neutral-800 text-neutral-400"
+            }`}
+          >
             {isMyTurn ? <Crown className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
             {isMyTurn ? "Your Turn" : "Their Turn"}
           </div>
@@ -182,11 +176,13 @@ export default function SkateGamePage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neutral-900 text-yellow-300 shadow-lg">
               {isOffense ? <Swords className="h-6 w-6" /> : <Shield className="h-6 w-6" />}
             </div>
-            
+
             <h2 className="text-xl font-bold text-white">
-              {isOffense ? "Set the Trick" : `Match: ${game.lastTrickDescription || "Unknown Trick"}`}
+              {isOffense
+                ? "Set the Trick"
+                : `Match: ${game.lastTrickDescription || "Unknown Trick"}`}
             </h2>
-            
+
             <p className="text-sm text-neutral-300 max-w-[280px] mx-auto">
               {isOffense
                 ? "You have control. Set a trick to put pressure on them."
@@ -228,7 +224,7 @@ export default function SkateGamePage() {
             </div>
             <h3 className="text-lg font-medium text-neutral-300">Waiting for {opponentName}</h3>
             <p className="text-sm text-neutral-500 mt-1">
-              {game.lastTrickDescription 
+              {game.lastTrickDescription
                 ? `They are trying to land: ${game.lastTrickDescription}`
                 : "They are setting a trick..."}
             </p>

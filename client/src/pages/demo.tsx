@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { User, Play, ArrowLeft } from 'lucide-react';
-import { useToast } from '../hooks/use-toast';
-import type { User as UserType } from '@shared/schema';
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { User, Play, ArrowLeft } from "lucide-react";
+import { useToast } from "../hooks/use-toast";
+import type { User as UserType } from "@shared/schema";
 
 export default function Demo() {
   const [, setLocation] = useLocation();
@@ -16,18 +16,18 @@ export default function Demo() {
   // Create demo user mutation
   const createDemoUserMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/demo-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/demo-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
-      if (!response.ok) throw new Error('Failed to create demo user');
+      if (!response.ok) throw new Error("Failed to create demo user");
       return response.json();
     },
     onSuccess: (user: UserType) => {
       setDemoUserId(user.id);
       toast({
         title: "Demo User Created!",
-        description: `Welcome ${user.firstName || 'User'}! Ready to start the tutorial.`,
+        description: `Welcome ${user.firstName || "User"}! Ready to start the tutorial.`,
       });
     },
     onError: () => {
@@ -52,19 +52,22 @@ export default function Demo() {
   };
 
   return (
-    <div className="min-h-screen bg-[#181818]" style={{
-      backgroundImage: `url('/attached_assets/graffwallskateboardrack_1754296307132.png')`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundAttachment: 'fixed'
-    }}>
+    <div
+      className="min-h-screen bg-[#181818]"
+      style={{
+        backgroundImage: `url('/attached_assets/graffwallskateboardrack_1754296307132.png')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
+    >
       <div className="min-h-screen bg-black/70">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
             <Button
               variant="ghost"
-              onClick={() => setLocation('/')}
+              onClick={() => setLocation("/")}
               className="text-[#fafafa] hover:text-orange-400"
               data-testid="button-back-home"
             >
@@ -88,7 +91,8 @@ export default function Demo() {
                   Interactive Tutorial Demo
                 </CardTitle>
                 <CardDescription className="text-gray-300 text-lg">
-                  Experience the complete SkateHubba onboarding flow with our interactive tutorial system.
+                  Experience the complete SkateHubba onboarding flow with our interactive tutorial
+                  system.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -96,23 +100,23 @@ export default function Demo() {
                   <h3 className="text-orange-400 font-semibold text-lg">What you'll learn:</h3>
                   <ul className="space-y-2 text-[#fafafa]">
                     <li className="flex items-start gap-3">
-                      <span className="text-orange-400">🗺️</span>
+                      <span className="text-orange-400"></span>
                       <span>Navigate the interactive map and check in at skate spots</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-orange-400">🎥</span>
+                      <span className="text-orange-400"></span>
                       <span>Upload your first clip to the Trenches feed</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-orange-400">🎨</span>
+                      <span className="text-orange-400"></span>
                       <span>Customize your avatar and digital closet</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-orange-400">⚔️</span>
+                      <span className="text-orange-400"></span>
                       <span>Challenge other skaters to S.K.A.T.E. battles</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-orange-400">🏆</span>
+                      <span className="text-orange-400"></span>
                       <span>Build your rep and connect with the community</span>
                     </li>
                   </ul>
@@ -129,7 +133,9 @@ export default function Demo() {
                       className="w-full bg-orange-400 text-black hover:bg-orange-500 font-semibold py-3"
                       data-testid="button-create-demo-user"
                     >
-                      {createDemoUserMutation.isPending ? 'Creating Demo User...' : 'Create Demo Account & Start Tutorial'}
+                      {createDemoUserMutation.isPending
+                        ? "Creating Demo User..."
+                        : "Create Demo Account & Start Tutorial"}
                     </Button>
                   </div>
                 ) : (
@@ -140,12 +146,14 @@ export default function Demo() {
                         <span className="text-success font-semibold">Demo Account Ready!</span>
                       </div>
                       <p className="text-[#fafafa]">
-                        Username: <Badge variant="outline" className="ml-2 border-success/50 text-success">
-                          {demoUser?.firstName || demoUser?.email || 'Demo User'}
+                        Username:{" "}
+                        <Badge variant="outline" className="ml-2 border-success/50 text-success">
+                          {demoUser?.firstName || demoUser?.email || "Demo User"}
                         </Badge>
                       </p>
                       <p className="text-sm text-gray-300 mt-2">
-                        Tutorial progress: {demoUser?.onboardingCompleted ? 'Completed' : 'Ready to start'}
+                        Tutorial progress:{" "}
+                        {demoUser?.onboardingCompleted ? "Completed" : "Ready to start"}
                       </p>
                     </div>
 
@@ -227,11 +235,15 @@ export default function Demo() {
                     <span className="text-gray-300">/api/users/:id/progress</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30">PATCH</Badge>
+                    <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30">
+                      PATCH
+                    </Badge>
                     <span className="text-gray-300">/api/users/:id/progress/:stepId</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30">PATCH</Badge>
+                    <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30">
+                      PATCH
+                    </Badge>
                     <span className="text-gray-300">/api/users/:id/onboarding</span>
                   </div>
                 </div>

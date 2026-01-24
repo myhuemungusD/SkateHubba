@@ -13,7 +13,8 @@
  *
  * Behavior:
  * - Unauthenticated: Show landing page (no app shell)
- * - Authenticated: Redirect to /home
+ * - Authenticated with profile: Redirect to /home
+ * - Authenticated without profile: Redirect to profile setup
  */
 
 import { useEffect } from "react";
@@ -24,26 +25,28 @@ import { Footer } from "../components/Footer";
 import { HeroSection } from "../sections/landing/HeroSection";
 import { FeatureGrid } from "../sections/landing/FeatureGrid";
 import { landingContent } from "../content/landing";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 
 export default function UnifiedLanding() {
-  const { user, loading } = useAuth();
+  const auth = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect authenticated users to /home
+  // Redirect authenticated users based on profile status
   useEffect(() => {
-    if (!loading && user) {
+    if (auth.loading) return;
+
+    if (auth.isAuthenticated && auth.profileStatus === "missing") {
+      setLocation("/profile/setup?next=/home", { replace: true });
+      return;
+    }
+
+    if (auth.isAuthenticated && auth.profileStatus === "exists") {
       setLocation("/home", { replace: true });
     }
-  }, [user, loading, setLocation]);
+  }, [auth.isAuthenticated, auth.profileStatus, auth.loading, setLocation]);
 
   // Show nothing while checking auth (prevents flash)
-  if (loading) {
-    return null;
-  }
-
-  // If authenticated, don't render (redirect will happen)
-  if (user) {
+  if (auth.loading || (auth.isAuthenticated && auth.profileStatus === "unknown")) {
     return null;
   }
 

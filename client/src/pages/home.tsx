@@ -1,50 +1,18 @@
-/**
- * Authenticated Member Hub (Action-Focused)
- *
- * Purpose: Central dashboard for logged-in users
- * Target: Authenticated users
- * Goal: Quick navigation to core features
- *
- * Content: Member-focused
- * - Quick action buttons (Feed, Map, Battle, Profile)
- * - Live platform stats (member-specific data)
- * - Feature overview with member benefits
- * - Email signup (newsletter, lower priority)
- */
-
-import EmailSignup from "../components/EmailSignup";
+import { Link } from "wouter";
+import { ArrowRight } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { homeContent } from "../content/home";
 import { MemberHubHero } from "../sections/home/MemberHubHero";
 import { StatsStrip } from "../sections/home/StatsStrip";
 import { FeatureGrid } from "../sections/landing/FeatureGrid";
-import { homeContent } from "../content/home";
-import { useQuery } from "@tanstack/react-query";
-
-// Fetch real stats from backend
-function useAppStats() {
-  return useQuery({
-    queryKey: ["/api/stats"],
-    queryFn: async () => {
-      try {
-        const res = await fetch("/api/stats");
-        if (!res.ok) return null;
-        return res.json();
-      } catch {
-        return null;
-      }
-    },
-    staleTime: 1000 * 60 * 5, // 5 min cache
-    retry: false,
-  });
-}
 
 export default function Home() {
-  const { data: stats } = useAppStats();
-
-  // Use real stats if available, otherwise show conservative estimates
+  const auth = useAuth();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
   const displayStats = [
-    { label: "Active Skaters", value: stats?.totalUsers || "Growing" },
-    { label: "Skate Spots Mapped", value: stats?.totalSpots || "50+" },
-    { label: "SKATE Battles", value: stats?.totalBattles || "Active" },
+    { label: "Active Skaters", value: "Growing" },
+    { label: "Skate Spots Mapped", value: "50+" },
+    { label: "SKATE Battles", value: "Active" },
   ];
 
   return (
@@ -57,40 +25,40 @@ export default function Home() {
 
       <StatsStrip stats={displayStats} />
 
-      <section className="py-24 bg-gradient-to-b from-zinc-900 to-black text-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 text-white">Built for Real Skaters</h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Every feature designed by skaters, for skaters. No gimmicks—just the tools you need.
-            </p>
-          </div>
-
+      <section className="py-16 px-6">
+        <div className="max-w-6xl mx-auto">
           <FeatureGrid features={homeContent.features} columns={4} />
         </div>
       </section>
 
-      <EmailSignup />
-
-      <footer className="py-8 text-center text-gray-500 bg-black border-t border-orange-400/10">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="flex flex-wrap justify-center gap-6 mb-4 text-sm">
-            <a href="/specs" className="hover:text-orange-400 transition-colors">
-              Specs
-            </a>
-            <a
-              href="mailto:hello@skatehubba.com"
-              className="hover:text-orange-400 transition-colors"
+      <section className="py-12 px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+          {homeContent.trustIndicators.map((item, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-semibold uppercase tracking-wide text-zinc-200 backdrop-blur"
             >
-              Contact
-            </a>
-          </div>
-          <p className="text-sm">
-            &copy; {new Date().getFullYear()}{" "}
-            <span className="text-orange-400 font-semibold">SkateHubba</span> — Own Your Tricks.
-          </p>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+                <item.icon className={`h-5 w-5 ${item.color}`} />
+              </div>
+              {item.text}
+            </div>
+          ))}
         </div>
-      </footer>
+      </section>
+
+      {!isAuthenticated && (
+        <section className="py-8 px-6">
+          <div className="max-w-6xl mx-auto flex justify-center">
+            <Link href="/auth">
+              <a className="group inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 text-base font-bold uppercase tracking-wide text-black shadow-[0_18px_60px_rgba(255,122,0,0.35)] transition hover:translate-y-[-1px]">
+                Sign In / Sign Up
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </a>
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -1,16 +1,16 @@
 /**
  * User Roles Hook
- * 
+ *
  * Provides utilities for managing user roles and custom claims.
- * Wraps AuthProvider's role state and adds admin actions.
- * 
+ * Wraps auth store role state and adds admin actions.
+ *
  * @module hooks/useUserRoles
  */
 
-import { useState, useCallback } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../lib/firebase/config';
-import { useAuth, UserRole } from '../context/AuthProvider';
+import { useState, useCallback } from "react";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../lib/firebase/config";
+import { useAuth, UserRole } from "../hooks/useAuth";
 
 export type { UserRole };
 
@@ -39,11 +39,11 @@ interface UseUserRolesReturn {
 
 /**
  * Hook for managing user roles
- * 
+ *
  * @example
  * ```tsx
  * const { roles, isAdmin, isVerifiedPro, grantRole } = useUserRoles();
- * 
+ *
  * // Grant a role (admin only)
  * await grantRole(targetUserId, 'verified_pro');
  * ```
@@ -61,12 +61,12 @@ export function useUserRoles(): UseUserRolesReturn {
     setError(null);
 
     try {
-      const manageUserRole = httpsCallable(functions, 'manageUserRole');
-      await manageUserRole({ targetUid, role, action: 'grant' });
+      const manageUserRole = httpsCallable(functions, "manageUserRole");
+      await manageUserRole({ targetUid, role, action: "grant" });
       console.log(`[useUserRoles] Granted ${role} to ${targetUid}`);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to grant role';
-      console.error('[useUserRoles] Error granting role:', err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to grant role";
+      console.error("[useUserRoles] Error granting role:", err);
       setError(errorMessage);
       throw err;
     } finally {
@@ -82,12 +82,12 @@ export function useUserRoles(): UseUserRolesReturn {
     setError(null);
 
     try {
-      const manageUserRole = httpsCallable(functions, 'manageUserRole');
-      await manageUserRole({ targetUid, role, action: 'revoke' });
+      const manageUserRole = httpsCallable(functions, "manageUserRole");
+      await manageUserRole({ targetUid, role, action: "revoke" });
       console.log(`[useUserRoles] Revoked ${role} from ${targetUid}`);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to revoke role';
-      console.error('[useUserRoles] Error revoking role:', err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to revoke role";
+      console.error("[useUserRoles] Error revoking role:", err);
       setError(errorMessage);
       throw err;
     } finally {
@@ -96,7 +96,7 @@ export function useUserRoles(): UseUserRolesReturn {
   }, []);
 
   return {
-    // From AuthProvider (single source of truth)
+    // From auth store (single source of truth)
     roles: auth.roles,
     refreshUserClaims: auth.refreshRoles,
     hasRole: auth.hasRole,

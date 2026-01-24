@@ -20,7 +20,7 @@ export default function VerifyPage() {
       toast({
         title: "Error",
         description: "No user found. Please sign up first.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -29,21 +29,21 @@ export default function VerifyPage() {
     try {
       await sendEmailVerification(currentUser);
       toast({
-        title: "Verification email sent! 📧",
-        description: "Check your inbox and spam folder."
+        title: "Verification email sent! ",
+        description: "Check your inbox and spam folder.",
       });
     } catch (error: any) {
-      if (error.code === 'auth/too-many-requests') {
+      if (error.code === "auth/too-many-requests") {
         toast({
           title: "Too many requests",
           description: "Please wait a few minutes before trying again.",
-          variant: "destructive"
+          variant: "destructive",
         });
       } else {
         toast({
           title: "Failed to send email",
           description: error.message,
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } finally {
@@ -56,7 +56,7 @@ export default function VerifyPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">🛹</div>
+            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl"></div>
             <h1 className="text-3xl font-bold text-white">SkateHubba</h1>
           </div>
         </div>
@@ -68,7 +68,8 @@ export default function VerifyPage() {
               <CardTitle className="text-2xl text-white">Verify Your Email</CardTitle>
             </div>
             <CardDescription className="text-gray-400">
-              We sent a verification link to <span className="text-white font-semibold">{userEmail}</span>
+              We sent a verification link to{" "}
+              <span className="text-white font-semibold">{userEmail}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -101,7 +102,9 @@ export default function VerifyPage() {
                 <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-orange-400 font-medium">Can't find the email?</p>
-                  <p className="text-gray-400 text-sm">Check your spam folder or request a new one below</p>
+                  <p className="text-gray-400 text-sm">
+                    Check your spam folder or request a new one below
+                  </p>
                 </div>
               </div>
             </div>
@@ -132,7 +135,7 @@ export default function VerifyPage() {
                 className="text-gray-400 hover:text-white text-sm"
                 data-testid="link-back-home"
               >
-                ← Back to Home
+                Back to Home
               </button>
             </div>
           </CardContent>

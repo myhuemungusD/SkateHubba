@@ -109,7 +109,7 @@ export default function UltimateEmailSignup({
       <div className={`${styles.container} ${className}`}>
         <div className="bg-success/20 border border-success rounded-xl p-6 text-center">
           <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
-          <h3 className="text-success font-bold text-xl mb-2">You're In! 🎉</h3>
+          <h3 className="text-success font-bold text-xl mb-2">You're In! </h3>
           <p className="text-success/90 mb-4">Get ready for updates, drops & exclusive sessions.</p>
           <button
             onClick={() => setState({ status: "idle" })}
@@ -214,7 +214,7 @@ export default function UltimateEmailSignup({
       {/* Minimal social proof for non-hero variants */}
       {showSocialProof && variant !== "hero" && (
         <p className="text-gray-400 text-xs text-center">
-          Join {subscriberCount.toLocaleString()}+ skaters • Free beta access
+          Join {subscriberCount.toLocaleString()}+ skaters Free beta access
         </p>
       )}
     </div>

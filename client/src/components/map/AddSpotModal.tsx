@@ -1,8 +1,8 @@
-import type { FormEvent } from 'react';
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { Loader2, MapPin } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import type { FormEvent } from "react";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Loader2, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,43 +10,43 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { insertSpotSchema, SPOT_TYPES, SPOT_TIERS, type InsertSpot } from '@shared/schema';
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { insertSpotSchema, SPOT_TYPES, SPOT_TIERS, type InsertSpot } from "@shared/schema";
 
 const SPOT_TYPE_LABELS: Record<string, string> = {
-  'rail': '🛤️ Rail',
-  'ledge': '📦 Ledge',
-  'stairs': '🪜 Stairs',
-  'gap': '🕳️ Gap',
-  'bank': '📐 Bank',
-  'manual-pad': '🛹 Manual Pad',
-  'flat': '🔲 Flat Ground',
-  'bowl': '🥣 Bowl',
-  'mini-ramp': '🏗️ Mini Ramp',
-  'vert': '🎢 Vert',
-  'diy': '🔧 DIY',
-  'park': '🏞️ Skate Park',
-  'street': '🏙️ Street',
-  'other': '❓ Other',
+  rail: " Rail",
+  ledge: " Ledge",
+  stairs: " Stairs",
+  gap: " Gap",
+  bank: " Bank",
+  "manual-pad": " Manual Pad",
+  flat: " Flat Ground",
+  bowl: " Bowl",
+  "mini-ramp": " Mini Ramp",
+  vert: " Vert",
+  diy: " DIY",
+  park: " Skate Park",
+  street: " Street",
+  other: " Other",
 };
 
 const TIER_LABELS: Record<string, string> = {
-  'bronze': '🥉 Bronze - Local spot',
-  'silver': '🥈 Silver - Worth the trip',
-  'gold': '🥇 Gold - Must skate',
-  'legendary': '👑 Legendary - Iconic',
+  bronze: " Bronze - Local spot",
+  silver: " Silver - Worth the trip",
+  gold: " Gold - Must skate",
+  legendary: " Legendary - Iconic",
 };
 
 interface AddSpotModalProps {
@@ -57,42 +57,40 @@ interface AddSpotModalProps {
 
 export function AddSpotModal({ isOpen, onClose, userLocation }: AddSpotModalProps) {
   const { toast } = useToast();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [spotType, setSpotType] = useState<string>('street');
-  const [tier, setTier] = useState<string>('bronze');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [spotType, setSpotType] = useState<string>("street");
+  const [tier, setTier] = useState<string>("bronze");
 
-  const isLocationReady = Boolean(
-    userLocation && userLocation.lat !== 0 && userLocation.lng !== 0,
-  );
+  const isLocationReady = Boolean(userLocation && userLocation.lat !== 0 && userLocation.lng !== 0);
 
   const mutation = useMutation({
     mutationFn: async (payload: InsertSpot) => {
-      const response = await apiRequest('POST', '/api/spots', payload);
+      const response = await apiRequest("POST", "/api/spots", payload);
       return response.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/spots'] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/spots"] });
       toast({
-        title: '🛹 Spot Saved!',
-        description: 'Your spot is now live on the map. Thanks for contributing!',
+        title: " Spot Saved!",
+        description: "Your spot is now live on the map. Thanks for contributing!",
       });
       handleClose();
     },
     onError: (error) => {
       toast({
-        title: 'Unable to save spot',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
+        title: "Unable to save spot",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
       });
     },
   });
 
   const handleClose = () => {
-    setName('');
-    setDescription('');
-    setSpotType('street');
-    setTier('bronze');
+    setName("");
+    setDescription("");
+    setSpotType("street");
+    setTier("bronze");
     onClose();
   };
 
@@ -102,18 +100,18 @@ export function AddSpotModal({ isOpen, onClose, userLocation }: AddSpotModalProp
     const trimmedName = name.trim();
     if (!trimmedName) {
       toast({
-        title: 'Name Required',
-        description: 'Give this spot a name before saving.',
-        variant: 'destructive',
+        title: "Name Required",
+        description: "Give this spot a name before saving.",
+        variant: "destructive",
       });
       return;
     }
 
     if (!userLocation || !isLocationReady) {
       toast({
-        title: 'Location Required',
-        description: 'We need your location to pin the spot.',
-        variant: 'destructive',
+        title: "Location Required",
+        description: "We need your location to pin the spot.",
+        variant: "destructive",
       });
       return;
     }
@@ -121,8 +119,8 @@ export function AddSpotModal({ isOpen, onClose, userLocation }: AddSpotModalProp
     const payload = insertSpotSchema.parse({
       name: trimmedName,
       description: description.trim() || undefined,
-      spotType: spotType as typeof SPOT_TYPES[number],
-      tier: tier as typeof SPOT_TIERS[number],
+      spotType: spotType as (typeof SPOT_TYPES)[number],
+      tier: tier as (typeof SPOT_TIERS)[number],
       lat: userLocation.lat,
       lng: userLocation.lng,
     });
@@ -142,18 +140,18 @@ export function AddSpotModal({ isOpen, onClose, userLocation }: AddSpotModalProp
             Drop a pin at your current location to share this spot with the community.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form className="space-y-4" onSubmit={handleSubmit}>
           {/* Location indicator */}
           {isLocationReady && userLocation && (
             <div className="flex items-center gap-2 p-2 bg-green-900/30 rounded-md border border-green-700/50">
               <MapPin className="w-4 h-4 text-green-400" />
               <span className="text-sm text-green-400">
-                📍 {userLocation.lat.toFixed(5)}, {userLocation.lng.toFixed(5)}
+                {userLocation.lat.toFixed(5)}, {userLocation.lng.toFixed(5)}
               </span>
             </div>
           )}
-          
+
           {!isLocationReady && (
             <div className="flex items-center gap-2 p-2 bg-orange-900/30 rounded-md border border-orange-700/50">
               <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />
@@ -254,7 +252,7 @@ export function AddSpotModal({ isOpen, onClose, userLocation }: AddSpotModalProp
                   Saving...
                 </span>
               ) : (
-                '🛹 Save Spot'
+                " Save Spot"
               )}
             </Button>
           </DialogFooter>

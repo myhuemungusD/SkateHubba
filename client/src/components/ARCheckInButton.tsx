@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MapPin, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { useToast } from "../hooks/use-toast";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import { useEmailVerification } from "../hooks/useEmailVerification";
 import { useSpotAccess, type SpotAccess } from "../store/useSpotAccess";
 import { useCheckIn } from "../features/checkins/useCheckIn";
@@ -48,7 +48,7 @@ export function ARCheckInButton({
     };
     grantAccess(access);
     toast({
-      title: "✅ Check-In Successful!",
+      title: " Check-In Successful!",
       description: `You're now checked in at ${spotName}. Access expires in 24 hours.`,
     });
     onCheckInSuccess?.(access);
@@ -117,7 +117,7 @@ export function ARCheckInButton({
         } catch (err) {
           const apiError = err instanceof ApiError ? err : null;
           toast({
-            title: "❌ Check-In Error",
+            title: " Check-In Error",
             description: apiError
               ? getUserFriendlyMessage(apiError)
               : "Failed to verify your location.",

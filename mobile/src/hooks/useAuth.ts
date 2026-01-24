@@ -1,19 +1,14 @@
-import { useState, useEffect } from 'react';
-import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase.config';
+import { useMemo } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 export function useAuth() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isInitialized } = useAuthStore();
+  const isAuthenticated = useMemo(() => !!user, [user]);
+  const loading = !isInitialized;
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  return { user, loading, isAuthenticated: !!user };
+  return {
+    user,
+    loading,
+    isAuthenticated,
+  };
 }

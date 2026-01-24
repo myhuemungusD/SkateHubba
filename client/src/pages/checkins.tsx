@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   Sparkles,
 } from "lucide-react";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import type { CheckInResult } from "../../../shared/checkin-types";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";

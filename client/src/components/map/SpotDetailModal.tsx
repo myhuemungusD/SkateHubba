@@ -21,36 +21,36 @@ import { CheckInButton } from "@/features/checkins/CheckInButton";
 
 // Labels with emojis for display
 const SPOT_TYPE_LABELS: Record<string, string> = {
-  rail: "🛤️ Rail",
-  ledge: "📐 Ledge",
-  stairs: "🪜 Stairs",
-  gap: "🌉 Gap",
-  bank: "📐 Bank",
-  "manual-pad": "⬜ Manual Pad",
-  flat: "🛹 Flat Ground",
-  bowl: "🥣 Bowl",
-  "mini-ramp": "🛷 Mini Ramp",
-  vert: "🎢 Vert",
-  diy: "🔨 DIY",
-  park: "🏟️ Skate Park",
-  street: "🏙️ Street Spot",
-  other: "❓ Other",
+  rail: " Rail",
+  ledge: " Ledge",
+  stairs: " Stairs",
+  gap: " Gap",
+  bank: " Bank",
+  "manual-pad": " Manual Pad",
+  flat: " Flat Ground",
+  bowl: " Bowl",
+  "mini-ramp": " Mini Ramp",
+  vert: " Vert",
+  diy: " DIY",
+  park: " Skate Park",
+  street: " Street Spot",
+  other: " Other",
 };
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   bronze: {
-    label: "🥉 Bronze",
+    label: " Bronze",
     color: "text-amber-600",
     bgColor: "bg-amber-900/30 border-amber-700",
   },
-  silver: { label: "🥈 Silver", color: "text-gray-300", bgColor: "bg-gray-700/30 border-gray-500" },
+  silver: { label: " Silver", color: "text-gray-300", bgColor: "bg-gray-700/30 border-gray-500" },
   gold: {
-    label: "🥇 Gold",
+    label: " Gold",
     color: "text-yellow-400",
     bgColor: "bg-yellow-900/30 border-yellow-600",
   },
   legendary: {
-    label: "👑 Legendary",
+    label: " Legendary",
     color: "text-purple-400",
     bgColor: "bg-purple-900/30 border-purple-600",
   },
@@ -108,7 +108,7 @@ export function SpotDetailModal({
       queryClient.invalidateQueries({ queryKey: ["/api/spots", spotId] });
       queryClient.invalidateQueries({ queryKey: ["/api/spots"] });
       toast({
-        title: "⭐ Rating submitted!",
+        title: " Rating submitted!",
         description: "Thanks for your feedback.",
       });
     },
@@ -201,7 +201,7 @@ export function SpotDetailModal({
               {spot.photoUrl ? (
                 <img src={spot.photoUrl} alt={spot.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="text-6xl">🛹</div>
+                <div className="text-6xl"></div>
               )}
               <button
                 onClick={onClose}
@@ -266,7 +266,7 @@ export function SpotDetailModal({
                     Rating
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    {spot.rating ? `${Number(spot.rating).toFixed(1)}` : "—"}
+                    {spot.rating ? `${Number(spot.rating).toFixed(1)}` : ""}
                     {spot.ratingCount ? (
                       <span className="text-sm font-normal text-gray-400 ml-1">
                         ({spot.ratingCount})

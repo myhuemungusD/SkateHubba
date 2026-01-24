@@ -142,7 +142,7 @@ export default function AuthVerifyPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">🛹</div>
+            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl"></div>
             <h1 className="text-3xl font-bold text-white">SkateHubba</h1>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function AuthVerifyPage() {
               <div className="text-center py-8">
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-white mb-2">
-                  {mode === "resetPassword" ? "Password Reset!" : "Email Verified!"} ✅
+                  {mode === "resetPassword" ? "Password Reset!" : "Email Verified!"}
                 </h2>
                 <p className="text-gray-300 mb-6">{message}</p>
                 <p className="text-gray-400 text-sm mb-4">Redirecting to sign in...</p>
@@ -192,7 +192,7 @@ export default function AuthVerifyPage() {
                       <Input
                         id="new-password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="pl-10 pr-10 bg-[#181818] border-gray-600 text-white placeholder:text-gray-500"
@@ -224,7 +224,7 @@ export default function AuthVerifyPage() {
                       <Input
                         id="confirm-password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="pl-10 bg-[#181818] border-gray-600 text-white placeholder:text-gray-500"
