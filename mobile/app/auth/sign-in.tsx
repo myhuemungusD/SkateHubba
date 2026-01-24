@@ -111,8 +111,8 @@ export default function SignIn() {
           <TouchableOpacity style={[styles.tab, styles.activeTab]}>
             <Text style={styles.activeTabText}>Sign In</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.tab} onPress={() => router.push("/auth/sign-up")}>
-            <Text style={styles.inactiveTabText}>Sign Up</Text>
+          <TouchableOpacity style={styles.tab} disabled>
+            <Text style={styles.inactiveTabText}>Sign Up (Soon)</Text>
           </TouchableOpacity>
         </View>
 

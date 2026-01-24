@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { User } from "firebase/auth";
-import { listenToAuth } from "../lib/auth";
+import { useAuthStore } from "../store/authStore";
 
 /**
  * Determines if a Firebase user is authenticated for the application.
  * @param user - The Firebase user object or null
  * @returns true if the user is authenticated, false otherwise
- * 
+ *
  * Authentication criteria:
  * - Anonymous users are authenticated
  * - Users with verified emails are authenticated
@@ -29,28 +29,63 @@ function isFirebaseUserAuthenticated(user: User | null): boolean {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    try {
-      const unsubscribe = listenToAuth((firebaseUser) => {
-        setUser(firebaseUser);
-        setIsLoading(false);
-      });
-
-      return () => unsubscribe();
-    } catch (error) {
-      console.error("[useAuth] Failed to listen to auth:", error);
-      setIsLoading(false);
-    }
-  }, []);
+  const {
+    user,
+    profile,
+    profileStatus,
+    roles,
+    loading,
+    isInitialized,
+    error,
+    signInWithGoogle,
+    signInGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    signInAnonymously,
+    signInAnon,
+    signOut,
+    resetPassword,
+    refreshRoles,
+    hasRole,
+    clearError,
+    setProfile,
+  } = useAuthStore();
 
   const isAuthenticated = useMemo(() => isFirebaseUserAuthenticated(user), [user]);
+  const isAdmin = useMemo(() => roles.includes("admin"), [roles]);
+  const isVerifiedPro = useMemo(() => roles.includes("verified_pro"), [roles]);
+  const isModerator = useMemo(() => roles.includes("moderator"), [roles]);
+
+  const hasProfile = profileStatus === "exists";
+  const needsProfileSetup = profileStatus === "missing";
 
   return {
     user,
-    isLoading,
+    profile,
+    profileStatus,
+    roles,
+    loading,
+    isInitialized,
+    error,
     isAuthenticated,
+    isAdmin,
+    isVerifiedPro,
+    isModerator,
+    hasProfile,
+    needsProfileSetup,
+    signInWithGoogle,
+    signInGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    signInAnonymously,
+    signInAnon,
+    signOut,
+    resetPassword,
+    refreshRoles,
+    hasRole,
+    clearError,
+    setProfile,
   };
 }
+
+export type { UserProfile, UserRole, ProfileStatus } from "../store/authStore";

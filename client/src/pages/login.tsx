@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { SiGoogle } from "react-icons/si";
 import { UserCircle, Copy, Check } from "lucide-react";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import { trackEvent } from "../lib/analytics";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";

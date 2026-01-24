@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MapPin, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { useToast } from "../hooks/use-toast";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import { useEmailVerification } from "../hooks/useEmailVerification";
 import { useSpotAccess, type SpotAccess } from "../store/useSpotAccess";
 import { useCheckIn } from "../features/checkins/useCheckIn";

@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { ArrowRight, Shield } from "lucide-react";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Home() {
   const auth = useAuth();

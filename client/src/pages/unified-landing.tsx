@@ -24,7 +24,7 @@ import { Footer } from "../components/Footer";
 import { HeroSection } from "../sections/landing/HeroSection";
 import { FeatureGrid } from "../sections/landing/FeatureGrid";
 import { landingContent } from "../content/landing";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 
 export default function UnifiedLanding() {
   const auth = useAuth();

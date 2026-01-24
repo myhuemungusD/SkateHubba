@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useCheckIn } from "./useCheckIn";
 import { ApiError, getUserFriendlyMessage } from "@/lib/api/errors";
 

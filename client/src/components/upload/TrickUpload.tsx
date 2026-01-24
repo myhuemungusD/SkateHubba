@@ -8,7 +8,7 @@ import { Textarea } from "../ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { useToast } from "../../hooks/use-toast";
 import LocationPicker, { type Location } from "./LocationPicker";
-import { useAuth } from "../../context/AuthProvider";
+import { useAuth } from "../../hooks/useAuth";
 import { db } from "../../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
@@ -17,7 +17,7 @@ export default function TrickUpload() {
   const authContext = useAuth();
   const user = authContext?.user ?? null;
   const [, setLocation] = useLocation();
-  
+
   const [trickName, setTrickName] = useState("");
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -83,12 +83,12 @@ export default function TrickUpload() {
       };
 
       const tricksCollection = collection(db, "tricks");
-      
+
       const writePromise = addDoc(tricksCollection, trickData);
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Upload timeout - Firestore write took too long")), 15000)
       );
-      
+
       await Promise.race([writePromise, timeoutPromise]);
 
       toast({
@@ -159,7 +159,9 @@ export default function TrickUpload() {
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-white">Description (optional)</Label>
+                <Label htmlFor="description" className="text-white">
+                  Description (optional)
+                </Label>
                 <Textarea
                   id="description"
                   data-testid="input-trick-description"

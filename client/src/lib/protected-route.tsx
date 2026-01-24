@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { Route, useLocation } from "wouter";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 
 export type Params = Record<string, string | undefined>;
 
@@ -43,7 +43,7 @@ function FullScreenSpinner() {
  * 2. Authenticated, profileStatus === "missing" → /profile/setup?next={currentPath}
  * 3. Authenticated, profileStatus === "exists" → render route
  *
- * Profile existence is determined by AuthProvider.profileStatus which checks
+ * Profile existence is determined by auth store profileStatus which checks
  * if the Firestore profile document exists for the user.
  */
 export default function ProtectedRoute({
@@ -58,7 +58,7 @@ export default function ProtectedRoute({
     <Route path={path}>
       {(params: Params) => {
         const bypass = isE2EBypass();
-        if (auth.loading) {
+        if (auth.loading || !auth.isInitialized) {
           return <FullScreenSpinner />;
         }
 

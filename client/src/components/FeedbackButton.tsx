@@ -1,44 +1,44 @@
-import { useState } from 'react';
-import { MessageSquare, Send } from 'lucide-react';
-import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useToast } from '../hooks/use-toast';
-import { useMutation } from '@tanstack/react-query';
-import { apiRequest } from '../lib/queryClient';
-import { useAuth } from '../context/AuthProvider';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { useState } from "react";
+import { MessageSquare, Send } from "lucide-react";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { useToast } from "../hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "../lib/queryClient";
+import { useAuth } from "../hooks/useAuth";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 export function FeedbackButton() {
   const [isOpen, setIsOpen] = useState(false);
-  const [feedbackType, setFeedbackType] = useState('general');
-  const [message, setMessage] = useState('');
+  const [feedbackType, setFeedbackType] = useState("general");
+  const [message, setMessage] = useState("");
   const { toast } = useToast();
   const authContext = useAuth();
   const user = authContext?.user ?? null;
 
   const feedbackMutation = useMutation({
     mutationFn: async (data: { type: string; message: string }) => {
-      const response = await apiRequest('POST', '/api/feedback', data);
+      const response = await apiRequest("POST", "/api/feedback", data);
       return await response.json();
     },
     onSuccess: () => {
       toast({
-        title: 'Feedback Sent! 🛹',
-        description: 'Thanks for helping us improve SkateHubba!',
-        className: 'bg-success/90 text-white border-success',
+        title: "Feedback Sent! 🛹",
+        description: "Thanks for helping us improve SkateHubba!",
+        className: "bg-success/90 text-white border-success",
       });
-      setMessage('');
-      setFeedbackType('general');
+      setMessage("");
+      setFeedbackType("general");
       setIsOpen(false);
     },
     onError: (error: any) => {
       toast({
-        title: 'Failed to Send',
-        description: error.message || 'Please try again later.',
-        variant: 'destructive',
+        title: "Failed to Send",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
       });
     },
   });
@@ -47,9 +47,9 @@ export function FeedbackButton() {
     e.preventDefault();
     if (!message.trim()) {
       toast({
-        title: 'Message Required',
-        description: 'Please enter your feedback.',
-        variant: 'destructive',
+        title: "Message Required",
+        description: "Please enter your feedback.",
+        variant: "destructive",
       });
       return;
     }
@@ -79,7 +79,10 @@ export function FeedbackButton() {
       </TooltipProvider>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="bg-[#232323] border-gray-700 text-white max-w-md" data-testid="dialog-feedback">
+        <DialogContent
+          className="bg-[#232323] border-gray-700 text-white max-w-md"
+          data-testid="dialog-feedback"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <MessageSquare className="w-5 h-5 text-orange-500" />
@@ -96,7 +99,7 @@ export function FeedbackButton() {
                 Feedback Type
               </Label>
               <Select value={feedbackType} onValueChange={setFeedbackType}>
-                <SelectTrigger 
+                <SelectTrigger
                   id="feedback-type"
                   className="bg-neutral-800 border-gray-700 text-white"
                   data-testid="select-feedback-type"
@@ -135,11 +138,7 @@ export function FeedbackButton() {
               />
             </div>
 
-            {user && (
-              <p className="text-sm text-gray-400">
-                Sending as: {user.email}
-              </p>
-            )}
+            {user && <p className="text-sm text-gray-400">Sending as: {user.email}</p>}
 
             <div className="flex gap-2 pt-2">
               <Button

@@ -5,7 +5,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useToast } from "./hooks/use-toast";
-import { useAuth, AuthProvider } from "./context/AuthProvider";
+import { useAuth } from "./hooks/useAuth";
+import { useAuthListener } from "./hooks/useAuthListener";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { StagingBanner } from "./components/StagingBanner";
@@ -84,11 +85,11 @@ const BoltsShowcase = lazy(() => import("./features/social/bolts-showcase/BoltsS
  * - Legacy routes (/old, /new) removed - zero duplication architecture
  */
 function RootRedirect() {
-  const { user, loading } = useAuth();
+  const { user, loading, isInitialized } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !isInitialized) return;
 
     if (user) {
       // Authenticated: Go to home
@@ -97,7 +98,7 @@ function RootRedirect() {
       // Unauthenticated: Go to landing
       setLocation("/landing", { replace: true });
     }
-  }, [user, loading, setLocation]);
+  }, [user, loading, isInitialized, setLocation]);
 
   return <LoadingScreen />;
 }
@@ -215,8 +216,11 @@ function AppShellTrickmintRoute(_props: { params: Params }) {
 }
 
 function AppShellTutorialRoute(_props: { params: Params }) {
-  const { user } = useAuth();
-  const userId = user!.uid;
+  const { user, loading, isInitialized } = useAuth();
+  if (loading || !isInitialized || !user) {
+    return <LoadingScreen />;
+  }
+  const userId = user.uid;
   return (
     <AppShell>
       <Tutorial userId={userId} />
@@ -287,6 +291,16 @@ function ProfileSetupRoute() {
 }
 
 function AppRoutes() {
+  const auth = useAuth();
+
+  if (
+    auth.loading ||
+    !auth.isInitialized ||
+    (auth.isAuthenticated && auth.profileStatus === "unknown")
+  ) {
+    return <LoadingScreen />;
+  }
+
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Switch>
@@ -305,7 +319,7 @@ function AppRoutes() {
         <Route path="/game" component={AppShellChallengeLobbyRoute} />
         <Route path="/signup" component={SignupPage} />
         <Route path="/signin" component={SigninPage} />
-        <Route path="/profile-setup" component={ProfileSetup} />
+        <Route path="/profile-setup" component={ProfileSetupRoute} />
         <Route path="/verify" component={VerifyPage} />
         <Route path="/auth/verify" component={AuthVerifyPage} />
         <Route path="/verify-email" component={VerifyEmailPage} />
@@ -339,7 +353,7 @@ function AppRoutes() {
   );
 }
 
-// Note: Google redirect result is handled by AuthProvider in AuthContext.tsx
+// Note: Google redirect result is handled by the auth store listener
 // This component just shows a welcome toast after successful redirect login
 // We detect this by checking sessionStorage for a flag set before redirect
 function GoogleRedirectWelcome() {
@@ -381,6 +395,9 @@ export default function App() {
   // Enable skip link for accessibility
   useSkipLink();
 
+  // Initialize auth listener (Zustand)
+  useAuthListener();
+
   useEffect(() => {
     if (firebaseAnalytics) {
       logger.info("Firebase Analytics initialized successfully");
@@ -389,45 +406,43 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            {/* Environment indicator - shows in staging/local only */}
-            <StagingBanner />
-            <GoogleRedirectWelcome />
-            <OrganizationStructuredData
-              data={{
-                name: "SkateHubba",
-                url: "https://skatehubba.com",
-                logo: "https://skatehubba.com/icon-512.png",
-                description:
-                  "Remote SKATE battles, legendary spot check-ins, and live lobbies. Join the ultimate skateboarding social platform.",
-                sameAs: ["https://twitter.com/skatehubba_app", "https://instagram.com/skatehubba"],
-              }}
-            />
-            <WebAppStructuredData
-              data={{
-                name: "SkateHubba",
-                url: "https://skatehubba.com",
-                description: "Stream. Connect. Skate. Your skateboarding social universe.",
-                applicationCategory: "SportsApplication",
-                operatingSystem: "Any",
-                offers: {
-                  price: "0",
-                  priceCurrency: "USD",
-                },
-              }}
-            />
-            <Router>
-              <AppRoutes />
-            </Router>
-            <Toaster />
-            <PWAInstallPrompt />
-            <AISkateChat />
-            <FeedbackButton />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          {/* Environment indicator - shows in staging/local only */}
+          <StagingBanner />
+          <GoogleRedirectWelcome />
+          <OrganizationStructuredData
+            data={{
+              name: "SkateHubba",
+              url: "https://skatehubba.com",
+              logo: "https://skatehubba.com/icon-512.png",
+              description:
+                "Remote SKATE battles, legendary spot check-ins, and live lobbies. Join the ultimate skateboarding social platform.",
+              sameAs: ["https://twitter.com/skatehubba_app", "https://instagram.com/skatehubba"],
+            }}
+          />
+          <WebAppStructuredData
+            data={{
+              name: "SkateHubba",
+              url: "https://skatehubba.com",
+              description: "Stream. Connect. Skate. Your skateboarding social universe.",
+              applicationCategory: "SportsApplication",
+              operatingSystem: "Any",
+              offers: {
+                price: "0",
+                priceCurrency: "USD",
+              },
+            }}
+          />
+          <Router>
+            <AppRoutes />
+          </Router>
+          <Toaster />
+          <PWAInstallPrompt />
+          <AISkateChat />
+          <FeedbackButton />
+        </TooltipProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

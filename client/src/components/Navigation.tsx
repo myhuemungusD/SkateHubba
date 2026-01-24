@@ -13,7 +13,7 @@ import {
   Gamepad2,
   Menu,
 } from "lucide-react";
-import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import CartDrawer from "./cart/CartDrawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { ProfileSearch } from "./search/ProfileSearch";

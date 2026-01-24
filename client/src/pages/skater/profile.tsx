@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChallengeButton } from "@/components/skater/ChallengeButton";
 import { ClosetGrid } from "@/components/skater/ClosetGrid";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile, ClosetItem } from "@shared/schema";
 
