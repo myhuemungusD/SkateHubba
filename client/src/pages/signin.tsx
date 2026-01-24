@@ -61,7 +61,7 @@ export default function SigninPage() {
       await auth?.signInWithEmail(email, password);
       // useEffect handles redirect based on profileStatus
       toast({
-        title: "Welcome back! 🛹",
+        title: "Welcome back!",
         description: "Signing you in...",
       });
     } catch (err: unknown) {
@@ -82,7 +82,7 @@ export default function SigninPage() {
       await auth?.signInWithGoogle();
       // useEffect handles redirect based on profileStatus
       toast({
-        title: "Welcome! 🛹",
+        title: "Welcome!",
         description: "Signing you in with Google...",
       });
     } catch (err: unknown) {
@@ -101,7 +101,7 @@ export default function SigninPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">🛹</div>
+            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">SH</div>
             <h1 className="text-3xl font-bold text-white">SkateHubba</h1>
           </div>
           <p className="text-gray-400">Welcome back, skater!</p>

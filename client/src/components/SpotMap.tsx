@@ -308,7 +308,7 @@ export const SpotMap = memo(function SpotMap({
             html: `
               <div class="relative">
                 <div class="w-10 h-10 rounded-full bg-orange-500 border-4 border-white shadow-lg flex items-center justify-center animate-pulse">
-                  <span class="text-white text-xl">📍</span>
+                  <span class="text-white text-xl"></span>
                 </div>
               </div>
             `,

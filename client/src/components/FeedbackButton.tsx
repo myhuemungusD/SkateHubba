@@ -26,7 +26,7 @@ export function FeedbackButton() {
     },
     onSuccess: () => {
       toast({
-        title: "Feedback Sent! 🛹",
+        title: "Feedback Sent! ",
         description: "Thanks for helping us improve SkateHubba!",
         className: "bg-success/90 text-white border-success",
       });
@@ -108,16 +108,16 @@ export function FeedbackButton() {
                 </SelectTrigger>
                 <SelectContent className="bg-neutral-800 border-gray-700">
                   <SelectItem value="bug" className="text-white hover:bg-neutral-700">
-                    🐛 Bug Report
+                    Bug Report
                   </SelectItem>
                   <SelectItem value="feature" className="text-white hover:bg-neutral-700">
-                    💡 Feature Request
+                    Feature Request
                   </SelectItem>
                   <SelectItem value="improvement" className="text-white hover:bg-neutral-700">
-                    ⚡ Improvement
+                    Improvement
                   </SelectItem>
                   <SelectItem value="general" className="text-white hover:bg-neutral-700">
-                    💬 General Feedback
+                    General Feedback
                   </SelectItem>
                 </SelectContent>
               </Select>

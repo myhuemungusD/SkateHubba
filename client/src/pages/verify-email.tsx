@@ -32,7 +32,7 @@ export default function VerifyEmailPage() {
       setVerificationStatus("success");
       setMessage(response.message || "Email verified successfully!");
       toast({
-        title: "Email Verified! ✅",
+        title: "Email Verified! ",
         description: "You can now sign in to your account.",
         variant: "default",
       });
@@ -71,7 +71,7 @@ export default function VerifyEmailPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">🛹</div>
+            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl"></div>
             <h1 className="text-3xl font-bold text-white">SkateHubba</h1>
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function VerifyEmailPage() {
             {verificationStatus === "success" && (
               <div className="space-y-4">
                 <p className="text-success text-sm">
-                  🎉 Welcome to the SkateHubba community! Your account is now active.
+                  Welcome to the SkateHubba community! Your account is now active.
                 </p>
                 <Button
                   onClick={handleSignIn}
@@ -148,7 +148,7 @@ export default function VerifyEmailPage() {
                 className="text-gray-400 hover:text-white"
                 data-testid="button-back-home"
               >
-                ← Back to Home
+                Back to Home
               </Button>
             )}
           </CardContent>

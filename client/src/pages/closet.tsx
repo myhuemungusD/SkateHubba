@@ -29,7 +29,7 @@ export default function ClosetPage() {
       description: "Mastered the perfect kickflip",
       rarity: "legendary",
       owned: true,
-      image: "🏆",
+      image: "",
     },
     {
       id: "heelflip-silver",
@@ -37,7 +37,7 @@ export default function ClosetPage() {
       description: "Consistent heelflip execution",
       rarity: "rare",
       owned: true,
-      image: "⭐",
+      image: "",
     },
     {
       id: "tre-flip-bronze",
@@ -45,7 +45,7 @@ export default function ClosetPage() {
       description: "Landing tre flips regularly",
       rarity: "uncommon",
       owned: false,
-      image: "🥉",
+      image: "",
     },
     {
       id: "manual-master",
@@ -53,7 +53,7 @@ export default function ClosetPage() {
       description: "Hold manuals for 50+ feet",
       rarity: "rare",
       owned: true,
-      image: "🎯",
+      image: "",
     },
   ];
 

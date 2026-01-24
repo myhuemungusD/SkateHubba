@@ -32,7 +32,7 @@ export default function SignupPage() {
     try {
       await auth?.signUpWithEmail(email, password);
       toast({
-        title: "Account Created! 🛹",
+        title: "Account Created!",
         description: "Now let's set up your profile!",
       });
       setLocation("/profile/setup");
@@ -54,7 +54,7 @@ export default function SignupPage() {
     try {
       await auth?.signInWithGoogle();
       toast({
-        title: "Account Created! 🛹",
+        title: "Account Created!",
         description: "Now let's set up your profile!",
       });
       setLocation("/profile/setup");
@@ -75,7 +75,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">🛹</div>
+            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">SH</div>
             <h1 className="text-3xl font-bold text-white">SkateHubba</h1>
           </div>
           <p className="text-gray-400">Join the skateboarding community</p>

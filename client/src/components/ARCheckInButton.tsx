@@ -48,7 +48,7 @@ export function ARCheckInButton({
     };
     grantAccess(access);
     toast({
-      title: "✅ Check-In Successful!",
+      title: " Check-In Successful!",
       description: `You're now checked in at ${spotName}. Access expires in 24 hours.`,
     });
     onCheckInSuccess?.(access);
@@ -117,7 +117,7 @@ export function ARCheckInButton({
         } catch (err) {
           const apiError = err instanceof ApiError ? err : null;
           toast({
-            title: "❌ Check-In Error",
+            title: " Check-In Error",
             description: apiError
               ? getUserFriendlyMessage(apiError)
               : "Failed to verify your location.",

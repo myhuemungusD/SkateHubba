@@ -17,13 +17,9 @@ export default function OrderConfirmation() {
         <div className="text-center py-20" data-testid="order-confirmation-success">
           <div className="mb-8">
             <CheckCircle className="w-24 h-24 mx-auto text-success mb-6" />
-            <h1 className="text-4xl font-bold mb-4">Order Confirmed! 🎉</h1>
-            <p className="text-xl text-gray-300 mb-2">
-              Thank you for your purchase!
-            </p>
-            <p className="text-gray-400">
-              You'll receive an email confirmation shortly.
-            </p>
+            <h1 className="text-4xl font-bold mb-4">Order Confirmed! </h1>
+            <p className="text-xl text-gray-300 mb-2">Thank you for your purchase!</p>
+            <p className="text-gray-400">You'll receive an email confirmation shortly.</p>
           </div>
 
           <div className="bg-gray-800 rounded-lg p-8 mb-8">
@@ -38,15 +34,11 @@ export default function OrderConfirmation() {
               </div>
               <div className="flex items-start gap-3">
                 <ArrowRight className="w-5 h-5 text-orange-500 mt-1 flex-shrink-0" />
-                <p className="text-gray-300">
-                  Your items will be shipped within 2-3 business days
-                </p>
+                <p className="text-gray-300">Your items will be shipped within 2-3 business days</p>
               </div>
               <div className="flex items-start gap-3">
                 <ArrowRight className="w-5 h-5 text-orange-500 mt-1 flex-shrink-0" />
-                <p className="text-gray-300">
-                  Track your order status in your account
-                </p>
+                <p className="text-gray-300">Track your order status in your account</p>
               </div>
             </div>
           </div>

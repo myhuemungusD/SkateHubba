@@ -92,7 +92,7 @@ export default function TrickUpload() {
       await Promise.race([writePromise, timeoutPromise]);
 
       toast({
-        title: "Trick uploaded! 🛹",
+        title: "Trick uploaded! ",
         description: "Your trick has been successfully saved.",
       });
 
@@ -124,7 +124,7 @@ export default function TrickUpload() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">🛹</div>
+            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl"></div>
             <h1 className="text-3xl font-bold text-white">Upload Trick</h1>
           </div>
           <p className="text-gray-400">Share your skateboarding skills with the community</p>

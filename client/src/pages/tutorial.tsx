@@ -93,7 +93,7 @@ export default function Tutorial({ userId }: TutorialProps) {
     },
     onSuccess: () => {
       toast({
-        title: "Tutorial Completed! 🎉",
+        title: "Tutorial Completed! ",
         description: "Welcome to SkateHubba! You're ready to start your skating journey.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}`] });
@@ -230,7 +230,7 @@ export default function Tutorial({ userId }: TutorialProps) {
                 <div>
                   <CardTitle className="text-[#fafafa] text-xl">{currentStep.title}</CardTitle>
                   <CardDescription className="text-gray-300">
-                    Step {currentStepIndex + 1} of {totalSteps} • {currentStep.type}
+                    Step {currentStepIndex + 1} of {totalSteps} {currentStep.type}
                   </CardDescription>
                 </div>
               </div>
@@ -396,7 +396,7 @@ export default function Tutorial({ userId }: TutorialProps) {
                       <div className="flex-1">
                         <h4 className="font-semibold text-[#fafafa] text-sm">{step.title}</h4>
                         <p className="text-xs text-gray-400">
-                          Step {index + 1} • {step.type}
+                          Step {index + 1} {step.type}
                         </p>
                       </div>
                     </div>

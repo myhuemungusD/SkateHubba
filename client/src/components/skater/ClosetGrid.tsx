@@ -1,27 +1,20 @@
-import { useMemo } from 'react';
-import { useClosetFilter } from '@/store/closetFilter';
-import { Badge } from '@/components/ui/badge';
-import type { ClosetItem } from '@shared/schema';
+import { useMemo } from "react";
+import { useClosetFilter } from "@/store/closetFilter";
+import { Badge } from "@/components/ui/badge";
+import type { ClosetItem } from "@shared/schema";
 
 interface ClosetGridProps {
   items: ClosetItem[];
 }
 
-const filterTypes: Array<'all' | 'deck' | 'trucks' | 'wheels' | 'shoes' | 'apparel' | 'accessory'> = [
-  'all',
-  'deck',
-  'trucks',
-  'wheels',
-  'shoes',
-  'apparel',
-  'accessory',
-];
+const filterTypes: Array<"all" | "deck" | "trucks" | "wheels" | "shoes" | "apparel" | "accessory"> =
+  ["all", "deck", "trucks", "wheels", "shoes", "apparel", "accessory"];
 
 export function ClosetGrid({ items }: ClosetGridProps) {
   const { type, setType } = useClosetFilter();
 
   const filtered = useMemo(
-    () => (type === 'all' ? items : items.filter((i) => i.type === type)),
+    () => (type === "all" ? items : items.filter((i) => i.type === type)),
     [items, type]
   );
 
@@ -34,8 +27,8 @@ export function ClosetGrid({ items }: ClosetGridProps) {
             onClick={() => setType(t)}
             className={`rounded px-3 py-1 text-sm transition ${
               type === t
-                ? 'bg-success text-black font-semibold'
-                : 'bg-black/50 text-neutral-200 hover:bg-black/60'
+                ? "bg-success text-black font-semibold"
+                : "bg-black/50 text-neutral-200 hover:bg-black/60"
             }`}
             data-testid={`filter-${t}`}
           >
@@ -51,15 +44,11 @@ export function ClosetGrid({ items }: ClosetGridProps) {
             className="rounded-md border border-white/10 bg-black/30 p-3 backdrop-blur-sm"
             data-testid={`closet-item-${item.id}`}
           >
-            <img
-              src={item.imageUrl}
-              alt={item.name}
-              className="h-36 w-full rounded object-cover"
-            />
+            <img src={item.imageUrl} alt={item.name} className="h-36 w-full rounded object-cover" />
             <div className="mt-2 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-white">
-                  {item.brand} — {item.name}
+                  {item.brand} {item.name}
                 </p>
                 <p className="text-xs text-neutral-300">{item.type}</p>
               </div>

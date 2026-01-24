@@ -24,23 +24,23 @@ interface TrickBattleArenaProps {
 }
 
 const TRICKS: Trick[] = [
-  { id: "1", name: "Kickflip", difficulty: 2, points: 100, emoji: "🛹" },
-  { id: "2", name: "Heelflip", difficulty: 2, points: 100, emoji: "⚡" },
-  { id: "3", name: "360 Flip", difficulty: 4, points: 300, emoji: "🌪️" },
-  { id: "4", name: "Hardflip", difficulty: 3, points: 200, emoji: "💥" },
-  { id: "5", name: "Impossible", difficulty: 5, points: 500, emoji: "🔥" },
-  { id: "6", name: "Backside 180", difficulty: 2, points: 150, emoji: "🔄" },
-  { id: "7", name: "Frontside 180", difficulty: 2, points: 150, emoji: "↪️" },
-  { id: "8", name: "Pop Shuvit", difficulty: 1, points: 50, emoji: "🎯" },
-  { id: "9", name: "Boardslide", difficulty: 3, points: 250, emoji: "🏂" },
-  { id: "10", name: "Nollie Flip", difficulty: 4, points: 350, emoji: "✨" },
+  { id: "1", name: "Kickflip", difficulty: 2, points: 100, emoji: "" },
+  { id: "2", name: "Heelflip", difficulty: 2, points: 100, emoji: "" },
+  { id: "3", name: "360 Flip", difficulty: 4, points: 300, emoji: "" },
+  { id: "4", name: "Hardflip", difficulty: 3, points: 200, emoji: "" },
+  { id: "5", name: "Impossible", difficulty: 5, points: 500, emoji: "" },
+  { id: "6", name: "Backside 180", difficulty: 2, points: 150, emoji: "" },
+  { id: "7", name: "Frontside 180", difficulty: 2, points: 150, emoji: "" },
+  { id: "8", name: "Pop Shuvit", difficulty: 1, points: 50, emoji: "" },
+  { id: "9", name: "Boardslide", difficulty: 3, points: 250, emoji: "" },
+  { id: "10", name: "Nollie Flip", difficulty: 4, points: 350, emoji: "" },
 ];
 
 export default function TrickBattleArena({ spotId }: TrickBattleArenaProps) {
   const [gameState, setGameState] = useState<"waiting" | "active" | "ended">("waiting");
   const [players, setPlayers] = useState<Player[]>([
-    { id: "1", name: "You", score: 0, combo: 0, letters: "", avatar: "🛹" },
-    { id: "2", name: "Opponent", score: 0, combo: 0, letters: "", avatar: "🎮" },
+    { id: "1", name: "You", score: 0, combo: 0, letters: "", avatar: "" },
+    { id: "2", name: "Opponent", score: 0, combo: 0, letters: "", avatar: "" },
   ]);
   const [currentTrick, setCurrentTrick] = useState<Trick | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
@@ -238,7 +238,7 @@ export default function TrickBattleArena({ spotId }: TrickBattleArenaProps) {
               <div className="text-right">
                 <p className="text-gray-400 text-sm mb-1">Opponent</p>
                 <p className="text-2xl font-bold">{loser.name}</p>
-                <p className="text-red-400 text-lg tracking-[0.5em]">{loser.letters || "—"}</p>
+                <p className="text-red-400 text-lg tracking-[0.5em]">{loser.letters || ""}</p>
               </div>
             </div>
           </div>
@@ -247,8 +247,8 @@ export default function TrickBattleArena({ spotId }: TrickBattleArenaProps) {
             onClick={() => {
               setGameState("waiting");
               setPlayers([
-                { id: "1", name: "You", score: 0, combo: 0, letters: "", avatar: "🛹" },
-                { id: "2", name: "Opponent", score: 0, combo: 0, letters: "", avatar: "🎮" },
+                { id: "1", name: "You", score: 0, combo: 0, letters: "", avatar: "" },
+                { id: "2", name: "Opponent", score: 0, combo: 0, letters: "", avatar: "" },
               ]);
               setRoundNumber(1);
             }}
@@ -303,7 +303,7 @@ export default function TrickBattleArena({ spotId }: TrickBattleArenaProps) {
                 <span className="text-sm">x{player.combo}</span>
               </div>
               <div className="text-2xl font-bold tracking-[0.3em] text-red-500">
-                {player.letters || "—"}
+                {player.letters || ""}
               </div>
             </div>
           </div>
@@ -349,7 +349,7 @@ export default function TrickBattleArena({ spotId }: TrickBattleArenaProps) {
                     <div className="flex-1">
                       <p className="font-bold text-sm">{trick.name}</p>
                       <p className={`text-xs ${getDifficultyColor(trick.difficulty)}`}>
-                        {"⭐".repeat(trick.difficulty)}
+                        {"".repeat(trick.difficulty)}
                       </p>
                     </div>
                   </div>

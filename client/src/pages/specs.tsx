@@ -4,7 +4,20 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import { ArrowLeft, Github, Mail, CheckCircle2, XCircle, Server, Database, Smartphone, Globe, FileCode, Shield, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  Github,
+  Mail,
+  CheckCircle2,
+  XCircle,
+  Server,
+  Database,
+  Smartphone,
+  Globe,
+  FileCode,
+  Shield,
+  Zap,
+} from "lucide-react";
 
 export default function SpecsPage() {
   const [isClient, setIsClient] = useState(false);
@@ -36,7 +49,11 @@ export default function SpecsPage() {
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-4xl mx-auto px-6 py-12">
         <Link href="/">
-          <Button variant="ghost" className="mb-8 text-gray-400 hover:text-white" data-testid="link-back-home">
+          <Button
+            variant="ghost"
+            className="mb-8 text-gray-400 hover:text-white"
+            data-testid="link-back-home"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Button>
@@ -47,7 +64,7 @@ export default function SpecsPage() {
             v0.2 - Phase 2
           </Badge>
           <h1 className="text-5xl font-bold mb-4 tracking-tight">
-            SkateHubba<span className="text-orange-500">™</span> Specs
+            SkateHubba<span className="text-orange-500"></span> Specs
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
             API, auth, monorepo, and real-world feature foundation is live.
@@ -60,13 +77,20 @@ export default function SpecsPage() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button className="bg-zinc-800 hover:bg-zinc-700 text-white" data-testid="button-github">
+            <Button
+              className="bg-zinc-800 hover:bg-zinc-700 text-white"
+              data-testid="button-github"
+            >
               <Github className="w-4 h-4 mr-2" />
               GitHub Repo
             </Button>
           </a>
           <a href="mailto:jason@skatehubba.com">
-            <Button variant="outline" className="border-orange-500 text-orange-400 hover:bg-orange-500/10" data-testid="button-contact">
+            <Button
+              variant="outline"
+              className="border-orange-500 text-orange-400 hover:bg-orange-500/10"
+              data-testid="button-contact"
+            >
               <Mail className="w-4 h-4 mr-2" />
               Contact
             </Button>
@@ -82,9 +106,7 @@ export default function SpecsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3" data-testid="status-api">
-              {apiStatus === "loading" && (
-                <span className="text-gray-400">Checking...</span>
-              )}
+              {apiStatus === "loading" && <span className="text-gray-400">Checking...</span>}
               {apiStatus === "ok" && (
                 <>
                   <CheckCircle2 className="w-5 h-5 text-success" />
@@ -178,10 +200,13 @@ export default function SpecsPage() {
                   <Badge className="bg-green-600 text-white mb-2">POST</Badge>
                   <p className="font-mono text-sm text-gray-300">/api/checkins</p>
                 </div>
-                <Badge variant="outline" className="border-orange-500 text-orange-400">Auth Required</Badge>
+                <Badge variant="outline" className="border-orange-500 text-orange-400">
+                  Auth Required
+                </Badge>
               </div>
               <p className="text-gray-400 text-sm mt-2">
-                Submit trick check-in with geo-verification. Returns XP points based on trick difficulty and spot tier.
+                Submit trick check-in with geo-verification. Returns XP points based on trick
+                difficulty and spot tier.
               </p>
             </CardContent>
           </Card>
@@ -193,7 +218,9 @@ export default function SpecsPage() {
                   <Badge className="bg-blue-600 text-white mb-2">GET</Badge>
                   <p className="font-mono text-sm text-gray-300">/api/health</p>
                 </div>
-                <Badge variant="outline" className="border-gray-500 text-gray-400">Public</Badge>
+                <Badge variant="outline" className="border-gray-500 text-gray-400">
+                  Public
+                </Badge>
               </div>
               <p className="text-gray-400 text-sm mt-2">
                 Health check endpoint for monitoring and status verification.
@@ -208,7 +235,9 @@ export default function SpecsPage() {
                   <Badge className="bg-blue-600 text-white mb-2">GET</Badge>
                   <p className="font-mono text-sm text-gray-300">/api/spots</p>
                 </div>
-                <Badge variant="outline" className="border-gray-500 text-gray-400">Public</Badge>
+                <Badge variant="outline" className="border-gray-500 text-gray-400">
+                  Public
+                </Badge>
               </div>
               <p className="text-gray-400 text-sm mt-2">
                 Retrieve skate spots with geo data, ratings, and tier classification.
@@ -226,26 +255,29 @@ export default function SpecsPage() {
 
         <Card className="bg-zinc-900 border-zinc-800 mb-12">
           <CardContent className="p-6 font-mono text-sm text-gray-300">
-            <pre className="whitespace-pre-wrap">{`├── apps/
-│   ├── web/       → React web app
-│   ├── server/    → Express.js API
-│   └── mobile/    → React Native app
-├── packages/
-│   ├── types/     → Shared Zod schemas
-│   ├── api-sdk/   → API client wrappers
-│   ├── db/        → Drizzle schema exports
-│   └── firebase/  → Firebase config
-├── specs/
-│   ├── checkin-endpoint.md
-│   ├── user-profile.md
-│   └── auth-flow.md
-└── shared/        → Legacy shared code`}</pre>
+            <pre className="whitespace-pre-wrap">{` apps/
+    web/        React web app
+    server/     Express.js API
+    mobile/     React Native app
+ packages/
+    types/      Shared Zod schemas
+    api-sdk/    API client wrappers
+    db/         Drizzle schema exports
+    firebase/   Firebase config
+ specs/
+    checkin-endpoint.md
+    user-profile.md
+    auth-flow.md
+ shared/         Legacy shared code`}</pre>
           </CardContent>
         </Card>
 
         <footer className="text-center text-gray-500 border-t border-zinc-800 pt-8">
           <p className="mb-2">
-            <a href="mailto:jason@skatehubba.com" className="hover:text-orange-400 transition-colors">
+            <a
+              href="mailto:jason@skatehubba.com"
+              className="hover:text-orange-400 transition-colors"
+            >
               jason@skatehubba.com
             </a>
           </p>
@@ -253,7 +285,7 @@ export default function SpecsPage() {
             v0.2 - Phase 2 Complete
           </Badge>
           <p className="mt-4 text-sm">
-            &copy; 2025 <span className="text-orange-400">SkateHubba™</span> — Built by Jason Hamilton
+            &copy; 2025 <span className="text-orange-400">SkateHubba</span> Built by Jason Hamilton
           </p>
         </footer>
       </div>

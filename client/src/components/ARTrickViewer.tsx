@@ -70,7 +70,7 @@ export function ARTrickViewer({
   const handleEnterAR = async () => {
     if (!hasAccess) {
       toast({
-        title: "🔒 Locked",
+        title: " Locked",
         description: "Check in at this spot to unlock AR trick viewer.",
         variant: "destructive",
       });
@@ -97,7 +97,7 @@ export function ARTrickViewer({
     setTimeout(() => {
       setIsLoadingModel(false);
       toast({
-        title: "🎮 AR Mode Active",
+        title: " AR Mode Active",
         description: "Point your camera at a flat surface to view the trick hologram.",
       });
     }, 1500);
@@ -169,9 +169,7 @@ export function ARTrickViewer({
               <div className="text-center p-6">
                 <div className="w-24 h-24 mx-auto mb-4 relative">
                   <div className="absolute inset-0 bg-orange-500/20 rounded-full animate-ping" />
-                  <div className="relative w-full h-full bg-gradient-to-br from-orange-500 to-orange-700 rounded-full flex items-center justify-center text-white text-3xl">
-                    🛹
-                  </div>
+                  <div className="relative w-full h-full bg-gradient-to-br from-orange-500 to-orange-700 rounded-full flex items-center justify-center text-white text-3xl"></div>
                 </div>
                 <p className="text-gray-300 mb-2">AR Trick Hologram</p>
                 <p className="text-sm text-gray-400">

@@ -166,7 +166,7 @@ export default function AuthPage() {
       await signIn(data.email, data.password);
       console.log("[AuthPage] Sign in successful");
       toast({
-        title: "Welcome back! 🛹",
+        title: "Welcome back! ",
         description: "You have successfully signed in.",
       });
     } catch (error) {
@@ -197,7 +197,7 @@ export default function AuthPage() {
       await signUp(data.email, data.password);
       console.log("[AuthPage] Sign up successful!");
       toast({
-        title: "Account Created! 📧",
+        title: "Account Created! ",
         description: "Please check your email to verify your account.",
       });
       setLocation("/verify");
@@ -230,7 +230,7 @@ export default function AuthPage() {
       await setAuthPersistence(rememberMe);
       await signInWithGoogle();
       toast({
-        title: "Welcome! 🛹",
+        title: "Welcome! ",
         description: "You have successfully signed in with Google.",
       });
     } catch (error) {
@@ -269,7 +269,7 @@ export default function AuthPage() {
     try {
       await resetPassword(forgotPasswordEmail);
       toast({
-        title: "Reset Email Sent 📧",
+        title: "Reset Email Sent ",
         description: "Check your inbox for password reset instructions.",
       });
       setShowForgotPassword(false);
@@ -295,7 +295,7 @@ export default function AuthPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <span className="text-4xl mr-2">🛹</span>
+            <span className="text-4xl mr-2"></span>
             <h1 className="text-3xl font-bold text-white">SkateHubba</h1>
           </div>
           <p className="text-gray-400">Find and share the best skate spots</p>
@@ -370,7 +370,7 @@ export default function AuthPage() {
                       <Input
                         id="signin-password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         {...signInForm.register("password")}
                         className="pl-10 pr-10 bg-[#181818] border-gray-600 text-white placeholder:text-gray-500"
                       />
@@ -572,7 +572,7 @@ export default function AuthPage() {
                       <Input
                         id="signup-password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         {...signUpForm.register("password")}
                         className="pl-10 pr-10 bg-[#181818] border-gray-600 text-white placeholder:text-gray-500"
                       />
@@ -700,7 +700,7 @@ export default function AuthPage() {
         {/* Back to Home */}
         <div className="text-center mt-6">
           <Link href="/" className="text-gray-400 hover:text-white text-sm">
-            ← Back to Home
+            Back to Home
           </Link>
         </div>
       </div>

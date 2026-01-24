@@ -92,7 +92,7 @@ export default function LoginPage() {
       await setAuthPersistence(rememberMe);
       await auth?.signInGoogle();
       toast({
-        title: "Welcome! 🛹",
+        title: "Welcome!",
         description: "You've successfully signed in with Google.",
       });
       trackEvent("login", { method: "google", rememberMe });
@@ -117,7 +117,7 @@ export default function LoginPage() {
       await setAuthPersistence(rememberMe);
       await auth?.signInAnon();
       toast({
-        title: "Welcome! 🛹",
+        title: "Welcome!",
         description: "You've signed in as a guest.",
       });
       trackEvent("login", { method: "anonymous", rememberMe });
@@ -140,7 +140,7 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">🛹</div>
+            <div className="h-12 w-12 text-orange-500 mr-2 text-4xl">SH</div>
             <h1 className="text-3xl font-bold text-white">SkateHubba</h1>
           </div>
           <p className="text-gray-400">Sign in to continue</p>
@@ -248,7 +248,7 @@ export default function LoginPage() {
                 className="text-orange-400 hover:text-orange-300"
                 data-testid="link-full-auth"
               >
-                Sign up with email →
+                Sign up with email
               </Button>
             </div>
           </CardContent>

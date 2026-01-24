@@ -64,21 +64,21 @@ const BoltsShowcase = lazy(() => import("./features/social/bolts-showcase/BoltsS
  * Routing Policy (Zero-Duplication Architecture)
  *
  * PUBLIC ROUTES:
- * - / (unauthenticated) → /landing (conversion-focused landing page)
- * - /landing → Public landing page with CTA to enter platform
- * - /home → Member hub (authenticated users only, action dashboard)
+ * - / (unauthenticated) -> /landing (conversion-focused landing page)
+ * - /landing -> Public landing page with CTA to enter platform
+ * - /home -> Member hub (authenticated users only, action dashboard)
  *
  * AUTHENTICATED ROUTES:
- * - /home → Main authenticated view (member hub)
- * - /feed → Activity feed
- * - /map → Spot map
- * - /skate-game → S.K.A.T.E. battles
- * - /leaderboard → Rankings
+ * - /home -> Main authenticated view (member hub)
+ * - /feed -> Activity feed
+ * - /map -> Spot map
+ * - /skate-game -> S.K.A.T.E. battles
+ * - /leaderboard -> Rankings
  *
  * ROUTING STRATEGY:
  * - Root (/) redirects unauthenticated users to /landing
  * - Root (/) redirects authenticated users to /home
- * - Landing page: minimal, conversion-focused ("Get Started" CTA → /signin)
+ * - Landing page: minimal, conversion-focused ("Get Started" CTA -> /signin)
  * - Sign in/Sign up: checks for profile, redirects to /profile-setup if missing
  * - Profile setup: redirects to /home after completion
  * - Home page: member hub with quick actions (Feed/Map/Battle/Profile)
@@ -370,7 +370,7 @@ function GoogleRedirectWelcome() {
 
       logger.info("[Google Auth] Successfully authenticated via redirect");
       toast({
-        title: "Welcome! 🛹",
+        title: "Welcome!",
         description: "You've successfully signed in with Google.",
       });
     } else if (wasGoogleRedirect && !loading && !user) {

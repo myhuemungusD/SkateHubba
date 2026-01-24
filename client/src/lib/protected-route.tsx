@@ -39,9 +39,9 @@ function FullScreenSpinner() {
  * Protected Route Guard
  *
  * Auth Resolution Logic (single source of truth):
- * 1. Not authenticated → /login?next={currentPath}
- * 2. Authenticated, profileStatus === "missing" → /profile/setup?next={currentPath}
- * 3. Authenticated, profileStatus === "exists" → render route
+ * 1. Not authenticated  /login?next={currentPath}
+ * 2. Authenticated, profileStatus === "missing"  /profile/setup?next={currentPath}
+ * 3. Authenticated, profileStatus === "exists"  render route
  *
  * Profile existence is determined by auth store profileStatus which checks
  * if the Firestore profile document exists for the user.
