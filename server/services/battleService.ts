@@ -73,7 +73,7 @@ export async function createBattle(input: CreateBattleInput & { creatorName?: st
 
   // Log truth event AFTER successful creation
   await logServerEvent(input.creatorId, "battle_created", {
-    battle_id: battleId,
+    battle_id: battle.id,
     matchmaking: input.matchmaking,
     opponent_id: input.opponentId,
     stance: input.stance,
@@ -81,7 +81,7 @@ export async function createBattle(input: CreateBattleInput & { creatorName?: st
   });
 
   logger.info("[Battle] Created", {
-    battleId,
+    battleId: battle.id,
     creatorId: input.creatorId,
   });
 
