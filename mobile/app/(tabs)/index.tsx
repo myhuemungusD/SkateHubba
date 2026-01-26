@@ -64,6 +64,15 @@ export default function HomeScreen() {
           <Text style={styles.cardTitle}>Profile</Text>
           <Text style={styles.cardDesc}>View your stats</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push("/settings" as never)}
+        >
+          <Ionicons name="settings" size={48} color="#ff6600" />
+          <Text style={styles.cardTitle}>Settings</Text>
+          <Text style={styles.cardDesc}>Preferences & account</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
