@@ -61,7 +61,6 @@ export default function MapPage() {
   const [isAddSpotOpen, setIsAddSpotOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null);
-  const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Track last toast to prevent duplicate error notifications
   const lastToastRef = useRef<{ type: string; time: number } | null>(null);
@@ -180,11 +179,6 @@ export default function MapPage() {
 
   const handleCloseAddSpot = useCallback(() => {
     setIsAddSpotOpen(false);
-    setSelectedMapLocation(null);
-  }, []);
-
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    setSelectedMapLocation({ lat, lng });
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -354,8 +348,6 @@ export default function MapPage() {
             userLocation={userLocation}
             selectedSpotId={selectedSpotId}
             onSelectSpot={handleSelectSpot}
-            addSpotMode={isAddSpotOpen}
-            onMapClick={handleMapClick}
           />
         )}
 
@@ -377,7 +369,7 @@ export default function MapPage() {
         <AddSpotModal
           isOpen={isAddSpotOpen}
           onClose={handleCloseAddSpot}
-          userLocation={selectedMapLocation || userLocationSimple}
+          userLocation={userLocationSimple}
         />
 
         {/* Floating Header */}
