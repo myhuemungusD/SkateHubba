@@ -980,4 +980,287 @@ export const onChallengeClipUpdate = functions.firestore
     }
   });
 
+// ============================================================================
+// Push Notifications (FCM)
+// ============================================================================
+
+/**
+ * Notification types
+ */
+type NotificationType =
+  | "challenge_received"
+  | "opponent_uploaded"
+  | "voting_requested"
+  | "result_posted"
+  | "new_follower"
+  | "spot_nearby";
+
+interface FCMToken {
+  token: string;
+  platform: "ios" | "android" | "web";
+  deviceId: string;
+  createdAt: admin.firestore.Timestamp;
+  lastRefreshed: admin.firestore.Timestamp;
+}
+
+interface SendNotificationParams {
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}
+
+/**
+ * Send push notification to a user
+ * Handles multiple tokens per user and cleans up invalid tokens
+ */
+async function sendPushNotification(params: SendNotificationParams): Promise<void> {
+  const { userId, type, title, body, data = {} } = params;
+
+  const db = admin.firestore();
+  const userDoc = await db.collection("users").doc(userId).get();
+
+  if (!userDoc.exists) {
+    console.log(`[sendPushNotification] User ${userId} not found`);
+    return;
+  }
+
+  const userData = userDoc.data();
+  const tokens: FCMToken[] = userData?.fcmTokens || [];
+  const preferences = userData?.notificationPreferences || {};
+
+  // Check if user has notifications enabled
+  if (preferences.enabled === false) {
+    console.log(`[sendPushNotification] Notifications disabled for user ${userId}`);
+    return;
+  }
+
+  // Check specific notification preference
+  const prefKey = type.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  if (preferences[prefKey] === false) {
+    console.log(`[sendPushNotification] ${type} notifications disabled for user ${userId}`);
+    return;
+  }
+
+  if (tokens.length === 0) {
+    console.log(`[sendPushNotification] No FCM tokens for user ${userId}`);
+    return;
+  }
+
+  // Prepare notification payload
+  const tokenStrings = tokens.map((t) => t.token);
+
+  const message: admin.messaging.MulticastMessage = {
+    tokens: tokenStrings,
+    notification: {
+      title,
+      body,
+    },
+    data: {
+      type,
+      timestamp: new Date().toISOString(),
+      ...data,
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: "default",
+          badge: 1,
+        },
+      },
+    },
+    android: {
+      priority: "high",
+      notification: {
+        sound: "default",
+        channelId: type.includes("challenge") ? "challenges" : "activity",
+      },
+    },
+  };
+
+  try {
+    const response = await admin.messaging().sendEachForMulticast(message);
+
+    console.log(
+      `[sendPushNotification] Sent to ${userId}: ${response.successCount} success, ${response.failureCount} failed`
+    );
+
+    // Clean up invalid tokens
+    const invalidTokens: string[] = [];
+    response.responses.forEach((res, idx) => {
+      if (!res.success) {
+        const errorCode = res.error?.code;
+        if (
+          errorCode === "messaging/invalid-registration-token" ||
+          errorCode === "messaging/registration-token-not-registered"
+        ) {
+          invalidTokens.push(tokenStrings[idx]);
+        }
+      }
+    });
+
+    if (invalidTokens.length > 0) {
+      // Remove invalid tokens
+      const validTokens = tokens.filter((t) => !invalidTokens.includes(t.token));
+      await db.collection("users").doc(userId).update({
+        fcmTokens: validTokens,
+      });
+      console.log(`[sendPushNotification] Cleaned up ${invalidTokens.length} invalid tokens for ${userId}`);
+    }
+  } catch (error) {
+    console.error(`[sendPushNotification] Failed to send to ${userId}:`, error);
+  }
+}
+
+/**
+ * Firestore Trigger: Send notification when new challenge is created
+ */
+export const onChallengeCreated = functions.firestore
+  .document("challenges/{challengeId}")
+  .onCreate(async (snap, context) => {
+    const challengeData = snap.data();
+    const challengeId = context.params.challengeId;
+
+    // Notify opponent about new challenge
+    const creatorDoc = await admin.firestore().collection("users").doc(challengeData.createdBy).get();
+    const creatorName = creatorDoc.data()?.displayName || "Someone";
+
+    await sendPushNotification({
+      userId: challengeData.opponent,
+      type: "challenge_received",
+      title: "New S.K.A.T.E. Challenge!",
+      body: `${creatorName} challenged you to a S.K.A.T.E. battle!`,
+      data: {
+        challengeId,
+        creatorId: challengeData.createdBy,
+        screen: `/challenge/${challengeId}`,
+      },
+    });
+
+    console.log(`[onChallengeCreated] Notification sent to ${challengeData.opponent} for challenge ${challengeId}`);
+  });
+
+/**
+ * Firestore Trigger: Send notifications on challenge status changes
+ */
+export const onChallengeStatusChange = functions.firestore
+  .document("challenges/{challengeId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    const challengeId = context.params.challengeId;
+
+    // Only process status changes
+    if (before.status === after.status) {
+      return;
+    }
+
+    const db = admin.firestore();
+
+    // Get participant names
+    const [creatorDoc, opponentDoc] = await Promise.all([
+      db.collection("users").doc(after.createdBy).get(),
+      db.collection("users").doc(after.opponent).get(),
+    ]);
+
+    const creatorName = creatorDoc.data()?.displayName || "Creator";
+    const opponentName = opponentDoc.data()?.displayName || "Opponent";
+
+    // Handle different status transitions
+    switch (after.status) {
+      case "opponent_uploading":
+        // Opponent has started responding - no notification yet
+        break;
+
+      case "both_ready":
+        // Both clips ready - notify both participants about voting
+        await Promise.all([
+          sendPushNotification({
+            userId: after.createdBy,
+            type: "voting_requested",
+            title: "Time to Vote!",
+            body: `${opponentName} uploaded their clip. Watch both and vote!`,
+            data: {
+              challengeId,
+              screen: `/challenge/${challengeId}/vote`,
+            },
+          }),
+          sendPushNotification({
+            userId: after.opponent,
+            type: "opponent_uploaded",
+            title: "Your Response is Ready!",
+            body: `Your challenge clip has been validated. Voting is open!`,
+            data: {
+              challengeId,
+              screen: `/challenge/${challengeId}/vote`,
+            },
+          }),
+        ]);
+        console.log(`[onChallengeStatusChange] Voting notifications sent for ${challengeId}`);
+        break;
+
+      case "completed":
+        // Challenge completed - notify both about results
+        const winnerId = after.voting?.result?.winner;
+        const winnerName = winnerId === after.createdBy ? creatorName : opponentName;
+
+        await Promise.all([
+          sendPushNotification({
+            userId: after.createdBy,
+            type: "result_posted",
+            title: "Challenge Results!",
+            body:
+              winnerId === after.createdBy
+                ? "Congratulations! You won the challenge!"
+                : `${opponentName} won this round. Challenge again!`,
+            data: {
+              challengeId,
+              winnerId: winnerId || "",
+              screen: `/challenge/${challengeId}/result`,
+            },
+          }),
+          sendPushNotification({
+            userId: after.opponent,
+            type: "result_posted",
+            title: "Challenge Results!",
+            body:
+              winnerId === after.opponent
+                ? "Congratulations! You won the challenge!"
+                : `${creatorName} won this round. Challenge again!`,
+            data: {
+              challengeId,
+              winnerId: winnerId || "",
+              screen: `/challenge/${challengeId}/result`,
+            },
+          }),
+        ]);
+        console.log(`[onChallengeStatusChange] Result notifications sent for ${challengeId}`);
+        break;
+    }
+  });
+
+/**
+ * Callable: Send test notification (for debugging)
+ */
+export const sendTestNotification = functions.https.onCall(
+  async (data: { title?: string; body?: string }, context: functions.https.CallableContext) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
+    }
+
+    await sendPushNotification({
+      userId: context.auth.uid,
+      type: "challenge_received",
+      title: data.title || "Test Notification",
+      body: data.body || "This is a test notification from SkateHubba!",
+      data: {
+        test: "true",
+      },
+    });
+
+    return { success: true };
+  }
+);
+
 export { createBounty, submitClaim, castVote, payOutClaim, expireBounties };
