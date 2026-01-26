@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import { registerRoutes } from "./routes.ts";
 import { setupVite, log } from "./vite-dev.ts";
 import compression from "compression";
-import helmet from "helmet";
+import helmet, { contentSecurityPolicy, ContentSecurityPolicyOptions } from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import logger from "./logger.ts";
@@ -52,7 +52,17 @@ app.use(
               upgradeInsecureRequests: [],
             },
           }
-        : false,
+        : ((): ContentSecurityPolicyOptions => {
+            const defaultDirectives = contentSecurityPolicy.getDefaultDirectives();
+            return {
+              directives: {
+                ...defaultDirectives,
+                // Relaxed for development: allow eval/inline and any origin for scripts/connect
+                "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*"],
+                "connect-src": ["'self'", "*"],
+              },
+            };
+          })(),
     // Strict-Transport-Security - enforce HTTPS
     strictTransportSecurity:
       process.env.NODE_ENV === "production"
