@@ -319,57 +319,665 @@ export const createProfile = functions.https.onCall(
 );
 
 // ============================================================================
-// Video Validation (Storage Trigger)
+// Video Validation (Storage Trigger) - Enterprise Grade
 // ============================================================================
 
-export const validateChallengeVideo = functions.storage.object().onFinalize(async (object) => {
-  const filePath = object.name;
-  if (!filePath || !filePath.startsWith("challenges/")) {
-    return;
-  }
+/**
+ * Challenge video states for the state machine
+ */
+type VideoStatus =
+  | "pending_upload"
+  | "processing"
+  | "ready"
+  | "rejected";
 
-  if (object.contentType && !object.contentType.startsWith("video/")) {
-    return;
-  }
+/**
+ * Validation configuration
+ */
+const VIDEO_VALIDATION_CONFIG = {
+  MIN_DURATION_SECONDS: 5,
+  MAX_DURATION_SECONDS: 15,
+  DURATION_TOLERANCE_SECONDS: 0.5, // Allow 14.5-15.5s
+  MAX_FILE_SIZE_BYTES: 100 * 1024 * 1024, // 100MB
+  ALLOWED_CONTENT_TYPES: ["video/mp4", "video/quicktime", "video/x-m4v"],
+};
 
-  const bucket = admin.storage().bucket(object.bucket);
-  const file = bucket.file(filePath);
-  const tempFilePath = path.join(
-    os.tmpdir(),
-    `${path.basename(filePath)}_${Date.now()}_${Math.random().toString(36).slice(2)}`
-  );
+/**
+ * Rejection reasons for failed validation
+ */
+type RejectionReason =
+  | "duration_too_long"
+  | "duration_too_short"
+  | "file_too_large"
+  | "invalid_format"
+  | "file_corrupted"
+  | "processing_failed";
 
-  try {
-    await file.download({ destination: tempFilePath });
+interface VideoValidationResult {
+  isValid: boolean;
+  duration?: number;
+  fileSize?: number;
+  width?: number;
+  height?: number;
+  codec?: string;
+  rejectionReason?: RejectionReason;
+  rejectionMessage?: string;
+}
 
-    const duration = await new Promise<number>((resolve, reject) => {
-      ffmpeg.ffprobe(
-        tempFilePath,
-        (err: Error | null, metadata: { format?: { duration?: number } }) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve(metadata?.format?.duration ?? 0);
+/**
+ * Extract video metadata using ffprobe
+ */
+async function getVideoMetadata(
+  filePath: string
+): Promise<{ duration: number; width?: number; height?: number; codec?: string }> {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(
+      filePath,
+      (err: Error | null, metadata: { format?: { duration?: number }; streams?: Array<{ codec_name?: string; width?: number; height?: number; codec_type?: string }> }) => {
+        if (err) {
+          reject(err);
+          return;
         }
-      );
+
+        const videoStream = metadata?.streams?.find((s) => s.codec_type === "video");
+        resolve({
+          duration: metadata?.format?.duration ?? 0,
+          width: videoStream?.width,
+          height: videoStream?.height,
+          codec: videoStream?.codec_name,
+        });
+      }
+    );
+  });
+}
+
+/**
+ * Update Firestore challenge document with validation result
+ */
+async function updateChallengeStatus(
+  challengeId: string,
+  userId: string,
+  status: VideoStatus,
+  metadata: Record<string, unknown>
+): Promise<void> {
+  const db = admin.firestore();
+
+  // Use a transaction for atomicity
+  await db.runTransaction(async (tx) => {
+    const challengeRef = db.collection("challenges").doc(challengeId);
+    const doc = await tx.get(challengeRef);
+
+    if (!doc.exists) {
+      console.warn(`[validateChallengeVideo] Challenge ${challengeId} not found`);
+      return;
+    }
+
+    const clipFieldPath = `clips.${userId}`;
+
+    tx.update(challengeRef, {
+      [`${clipFieldPath}.status`]: status,
+      [`${clipFieldPath}.validatedAt`]: admin.firestore.FieldValue.serverTimestamp(),
+      ...Object.fromEntries(
+        Object.entries(metadata).map(([key, value]) => [`${clipFieldPath}.${key}`, value])
+      ),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    if (duration < 14.5 || duration > 15.5) {
-      await file.delete();
-      console.warn(
-        `[validateChallengeVideo] Deleted invalid clip ${filePath} (duration ${duration}s)`
+    // Log audit entry
+    const auditRef = db.collection("audit_logs").doc();
+    tx.set(auditRef, {
+      action: "video_validation",
+      challengeId,
+      userId,
+      status,
+      metadata,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+/**
+ * Parse storage path to extract challenge and user info
+ * Expected format: challenges/{challengeId}/{userId}/{timestamp}.mp4
+ * or: challenges/drafts/{userId}/{timestamp}.mp4
+ */
+function parseStoragePath(filePath: string): {
+  challengeId: string | null;
+  userId: string | null;
+  isDraft: boolean;
+} {
+  const parts = filePath.split("/");
+
+  // challenges/{challengeId}/{userId}/{filename}
+  if (parts.length >= 4 && parts[0] === "challenges") {
+    if (parts[1] === "drafts") {
+      return { challengeId: null, userId: parts[2], isDraft: true };
+    }
+    return { challengeId: parts[1], userId: parts[2], isDraft: false };
+  }
+
+  return { challengeId: null, userId: null, isDraft: false };
+}
+
+/**
+ * validateChallengeVideo
+ *
+ * Storage trigger that validates uploaded challenge videos.
+ * Enforces duration (15s max), file size, and format.
+ * Updates Firestore state machine and deletes invalid uploads.
+ *
+ * State Machine:
+ * PENDING_UPLOAD -> PROCESSING -> READY | REJECTED
+ */
+export const validateChallengeVideo = functions
+  .runWith({
+    timeoutSeconds: 120,
+    memory: "512MB",
+  })
+  .storage.object()
+  .onFinalize(async (object) => {
+    const filePath = object.name;
+    const fileSize = object.size ? parseInt(object.size, 10) : 0;
+    const contentType = object.contentType;
+
+    // Only process challenge videos
+    if (!filePath || !filePath.startsWith("challenges/")) {
+      return;
+    }
+
+    // Check content type
+    if (!contentType || !contentType.startsWith("video/")) {
+      console.log(`[validateChallengeVideo] Skipping non-video file: ${filePath}`);
+      return;
+    }
+
+    // Parse path to get challenge and user info
+    const { challengeId, userId, isDraft } = parseStoragePath(filePath);
+
+    // Generate idempotency key from file metadata
+    const idempotencyKey = `${filePath}_${object.generation}_${object.metageneration}`;
+    const processedRef = admin.firestore().collection("processed_videos").doc(idempotencyKey);
+
+    // Check if already processed (idempotency)
+    const processedDoc = await processedRef.get();
+    if (processedDoc.exists) {
+      console.log(`[validateChallengeVideo] Already processed: ${filePath}`);
+      return;
+    }
+
+    // Mark as processing
+    await processedRef.set({
+      filePath,
+      startedAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: "processing",
+    });
+
+    const bucket = admin.storage().bucket(object.bucket);
+    const file = bucket.file(filePath);
+    const tempFilePath = path.join(
+      os.tmpdir(),
+      `validate_${Date.now()}_${Math.random().toString(36).slice(2)}.mp4`
+    );
+
+    let validationResult: VideoValidationResult = { isValid: false };
+
+    try {
+      console.log(`[validateChallengeVideo] Processing: ${filePath} (${fileSize} bytes)`);
+
+      // Update status to processing if we have challenge context
+      if (challengeId && userId && !isDraft) {
+        await updateChallengeStatus(challengeId, userId, "processing", {});
+      }
+
+      // Validate file size first (before downloading)
+      if (fileSize > VIDEO_VALIDATION_CONFIG.MAX_FILE_SIZE_BYTES) {
+        validationResult = {
+          isValid: false,
+          fileSize,
+          rejectionReason: "file_too_large",
+          rejectionMessage: `File size ${Math.round(fileSize / (1024 * 1024))}MB exceeds maximum ${Math.round(VIDEO_VALIDATION_CONFIG.MAX_FILE_SIZE_BYTES / (1024 * 1024))}MB`,
+        };
+      } else if (!VIDEO_VALIDATION_CONFIG.ALLOWED_CONTENT_TYPES.includes(contentType)) {
+        validationResult = {
+          isValid: false,
+          fileSize,
+          rejectionReason: "invalid_format",
+          rejectionMessage: `Content type ${contentType} is not allowed`,
+        };
+      } else {
+        // Download and analyze
+        await file.download({ destination: tempFilePath });
+
+        const metadata = await getVideoMetadata(tempFilePath);
+
+        validationResult = {
+          isValid: true,
+          duration: metadata.duration,
+          fileSize,
+          width: metadata.width,
+          height: metadata.height,
+          codec: metadata.codec,
+        };
+
+        // Validate duration
+        const minDuration = VIDEO_VALIDATION_CONFIG.MIN_DURATION_SECONDS;
+        const maxDuration =
+          VIDEO_VALIDATION_CONFIG.MAX_DURATION_SECONDS +
+          VIDEO_VALIDATION_CONFIG.DURATION_TOLERANCE_SECONDS;
+
+        if (metadata.duration < minDuration) {
+          validationResult.isValid = false;
+          validationResult.rejectionReason = "duration_too_short";
+          validationResult.rejectionMessage = `Video duration ${metadata.duration.toFixed(1)}s is below minimum ${minDuration}s`;
+        } else if (metadata.duration > maxDuration) {
+          validationResult.isValid = false;
+          validationResult.rejectionReason = "duration_too_long";
+          validationResult.rejectionMessage = `Video duration ${metadata.duration.toFixed(1)}s exceeds maximum ${VIDEO_VALIDATION_CONFIG.MAX_DURATION_SECONDS}s`;
+        }
+      }
+
+      // Handle validation result
+      if (validationResult.isValid) {
+        console.log(
+          `[validateChallengeVideo] VALID: ${filePath} (${validationResult.duration?.toFixed(1)}s, ${validationResult.width}x${validationResult.height})`
+        );
+
+        // Update Firestore to READY state
+        if (challengeId && userId && !isDraft) {
+          await updateChallengeStatus(challengeId, userId, "ready", {
+            duration: validationResult.duration,
+            width: validationResult.width,
+            height: validationResult.height,
+            codec: validationResult.codec,
+            fileSize: validationResult.fileSize,
+          });
+        }
+
+        // Mark as processed successfully
+        await processedRef.update({
+          status: "completed",
+          result: "valid",
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          metadata: validationResult,
+        });
+      } else {
+        console.warn(
+          `[validateChallengeVideo] REJECTED: ${filePath} - ${validationResult.rejectionReason}: ${validationResult.rejectionMessage}`
+        );
+
+        // Update Firestore to REJECTED state
+        if (challengeId && userId && !isDraft) {
+          await updateChallengeStatus(challengeId, userId, "rejected", {
+            rejectionReason: validationResult.rejectionReason,
+            rejectionMessage: validationResult.rejectionMessage,
+          });
+        }
+
+        // Delete the invalid file
+        try {
+          await file.delete();
+          console.log(`[validateChallengeVideo] Deleted invalid file: ${filePath}`);
+        } catch (deleteError) {
+          console.error(`[validateChallengeVideo] Failed to delete invalid file: ${filePath}`, deleteError);
+        }
+
+        // Mark as processed with rejection
+        await processedRef.update({
+          status: "completed",
+          result: "rejected",
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          rejectionReason: validationResult.rejectionReason,
+          rejectionMessage: validationResult.rejectionMessage,
+        });
+      }
+    } catch (error) {
+      console.error(`[validateChallengeVideo] Processing failed: ${filePath}`, error);
+
+      // Update Firestore to REJECTED state due to processing error
+      if (challengeId && userId && !isDraft) {
+        await updateChallengeStatus(challengeId, userId, "rejected", {
+          rejectionReason: "processing_failed",
+          rejectionMessage: "Video processing failed. Please try uploading again.",
+        });
+      }
+
+      // Mark as failed
+      await processedRef.update({
+        status: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Delete potentially corrupted file
+      try {
+        await file.delete();
+      } catch {
+        // Ignore deletion errors
+      }
+    } finally {
+      // Clean up temp file
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  });
+
+// ============================================================================
+// Challenge Video Status Query
+// ============================================================================
+
+interface VideoStatusPayload {
+  challengeId: string;
+}
+
+interface VideoStatusResponse {
+  challengeId: string;
+  status: string;
+  clips: Record<string, {
+    status: VideoStatus;
+    duration?: number;
+    validatedAt?: admin.firestore.Timestamp;
+    rejectionReason?: string;
+    rejectionMessage?: string;
+  }>;
+}
+
+/**
+ * getVideoValidationStatus
+ *
+ * Query the current validation status of challenge videos.
+ * Useful for the mobile app to poll for status updates.
+ */
+export const getVideoValidationStatus = functions.https.onCall(
+  async (data: VideoStatusPayload, context: functions.https.CallableContext): Promise<VideoStatusResponse> => {
+    // Authentication required
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
+    }
+
+    // Validate input
+    const { challengeId } = data;
+    if (!challengeId || typeof challengeId !== "string") {
+      throw new functions.https.HttpsError("invalid-argument", "Challenge ID required.");
+    }
+
+    // Get challenge document
+    const challengeDoc = await admin.firestore().collection("challenges").doc(challengeId).get();
+
+    if (!challengeDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Challenge not found.");
+    }
+
+    const challengeData = challengeDoc.data();
+
+    // Verify user is a participant
+    const participants = challengeData?.participants || [];
+    if (!participants.includes(context.auth.uid)) {
+      throw new functions.https.HttpsError("permission-denied", "Not a participant in this challenge.");
+    }
+
+    return {
+      challengeId,
+      status: challengeData?.status || "unknown",
+      clips: challengeData?.clips || {},
+    };
+  }
+);
+
+// ============================================================================
+// Challenge Creation (Callable)
+// ============================================================================
+
+interface CreateChallengePayload {
+  opponentUid: string;
+  clipUrl: string;
+  clipDurationSec: number;
+  thumbnailUrl?: string;
+}
+
+interface CreateChallengeResponse {
+  challengeId: string;
+  status: string;
+}
+
+/**
+ * createChallenge
+ *
+ * Creates a new S.K.A.T.E. challenge and initializes the state machine.
+ * Validates opponent exists and sets up the challenge document.
+ */
+export const createChallenge = functions.https.onCall(
+  async (data: CreateChallengePayload, context: functions.https.CallableContext): Promise<CreateChallengeResponse> => {
+    // Authentication required
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
+    }
+
+    // App Check verification
+    verifyAppCheck(context);
+
+    // Rate limiting
+    checkRateLimit(context.auth.uid);
+
+    // Validate input
+    const { opponentUid, clipUrl, clipDurationSec, thumbnailUrl } = data;
+
+    if (!opponentUid || typeof opponentUid !== "string") {
+      throw new functions.https.HttpsError("invalid-argument", "Opponent UID required.");
+    }
+
+    if (opponentUid === context.auth.uid) {
+      throw new functions.https.HttpsError("invalid-argument", "Cannot challenge yourself.");
+    }
+
+    if (!clipUrl || typeof clipUrl !== "string") {
+      throw new functions.https.HttpsError("invalid-argument", "Clip URL required.");
+    }
+
+    if (typeof clipDurationSec !== "number" || clipDurationSec < 5 || clipDurationSec > 16) {
+      throw new functions.https.HttpsError("invalid-argument", "Invalid clip duration.");
+    }
+
+    const db = admin.firestore();
+
+    // Verify opponent exists
+    const opponentDoc = await db.collection("users").doc(opponentUid).get();
+    if (!opponentDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Opponent not found.");
+    }
+
+    // Create challenge document
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 7); // 7 days to complete
+
+    const challengeRef = db.collection("challenges").doc();
+    const challengeData = {
+      id: challengeRef.id,
+      createdBy: context.auth.uid,
+      opponent: opponentUid,
+      participants: [context.auth.uid, opponentUid],
+      status: "creator_ready", // Creator has uploaded their clip
+      rules: {
+        maxDuration: 15,
+        oneTake: true,
+      },
+      clips: {
+        [context.auth.uid]: {
+          userId: context.auth.uid,
+          videoUrl: clipUrl,
+          thumbnailUrl: thumbnailUrl || null,
+          duration: clipDurationSec,
+          status: "pending_validation", // Will be updated by storage trigger
+          uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      },
+      deadline: admin.firestore.Timestamp.fromDate(deadline),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await challengeRef.set(challengeData);
+
+    // Log audit
+    await db.collection("audit_logs").add({
+      action: "challenge_created",
+      challengeId: challengeRef.id,
+      createdBy: context.auth.uid,
+      opponent: opponentUid,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(
+      `[createChallenge] Created challenge ${challengeRef.id} from ${context.auth.uid} to ${opponentUid}`
+    );
+
+    return {
+      challengeId: challengeRef.id,
+      status: "creator_ready",
+    };
+  }
+);
+
+// ============================================================================
+// Accept Challenge (Opponent uploads their clip)
+// ============================================================================
+
+interface AcceptChallengePayload {
+  challengeId: string;
+  clipUrl: string;
+  clipDurationSec: number;
+  thumbnailUrl?: string;
+}
+
+/**
+ * acceptChallenge
+ *
+ * Opponent accepts a challenge by uploading their clip.
+ * Updates the challenge state machine.
+ */
+export const acceptChallenge = functions.https.onCall(
+  async (data: AcceptChallengePayload, context: functions.https.CallableContext): Promise<{ success: boolean; status: string }> => {
+    // Authentication required
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
+    }
+
+    // App Check verification
+    verifyAppCheck(context);
+
+    // Validate input
+    const { challengeId, clipUrl, clipDurationSec, thumbnailUrl } = data;
+
+    if (!challengeId || typeof challengeId !== "string") {
+      throw new functions.https.HttpsError("invalid-argument", "Challenge ID required.");
+    }
+
+    if (!clipUrl || typeof clipUrl !== "string") {
+      throw new functions.https.HttpsError("invalid-argument", "Clip URL required.");
+    }
+
+    const db = admin.firestore();
+
+    // Get and validate challenge
+    const challengeRef = db.collection("challenges").doc(challengeId);
+    const challengeDoc = await challengeRef.get();
+
+    if (!challengeDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Challenge not found.");
+    }
+
+    const challengeData = challengeDoc.data()!;
+
+    // Verify user is the opponent
+    if (challengeData.opponent !== context.auth.uid) {
+      throw new functions.https.HttpsError("permission-denied", "Only the challenged opponent can accept.");
+    }
+
+    // Verify challenge is in correct state
+    if (challengeData.status !== "creator_ready") {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        `Cannot accept challenge in ${challengeData.status} state.`
       );
     }
-  } catch (error) {
-    console.error("[validateChallengeVideo] Failed to validate clip:", filePath, error);
-  } finally {
-    try {
-      fs.unlinkSync(tempFilePath);
-    } catch {
-      // Ignore temp cleanup errors
+
+    // Check deadline
+    if (challengeData.deadline.toDate() < new Date()) {
+      throw new functions.https.HttpsError("deadline-exceeded", "Challenge deadline has passed.");
     }
+
+    // Update challenge with opponent's clip
+    await challengeRef.update({
+      [`clips.${context.auth.uid}`]: {
+        userId: context.auth.uid,
+        videoUrl: clipUrl,
+        thumbnailUrl: thumbnailUrl || null,
+        duration: clipDurationSec,
+        status: "pending_validation",
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      status: "opponent_uploading",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Log audit
+    await db.collection("audit_logs").add({
+      action: "challenge_accepted",
+      challengeId,
+      acceptedBy: context.auth.uid,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`[acceptChallenge] ${context.auth.uid} accepted challenge ${challengeId}`);
+
+    return {
+      success: true,
+      status: "opponent_uploading",
+    };
   }
-});
+);
+
+// ============================================================================
+// Firestore Trigger: Update Challenge Status when Both Clips Ready
+// ============================================================================
+
+export const onChallengeClipUpdate = functions.firestore
+  .document("challenges/{challengeId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Check if this is a clip status update
+    const clipsBefore = before?.clips || {};
+    const clipsAfter = after?.clips || {};
+
+    // Get all clip statuses
+    const afterStatuses = Object.values(clipsAfter).map((clip: unknown) => (clip as { status: string }).status);
+
+    // If both clips are now "ready", transition to voting state
+    const bothReady = afterStatuses.length === 2 && afterStatuses.every((s) => s === "ready");
+
+    if (bothReady && after.status !== "both_ready" && after.status !== "voting") {
+      const db = admin.firestore();
+      const challengeRef = db.collection("challenges").doc(context.params.challengeId);
+
+      // Set voting deadline (48 hours from now)
+      const votingDeadline = new Date();
+      votingDeadline.setHours(votingDeadline.getHours() + 48);
+
+      await challengeRef.update({
+        status: "both_ready",
+        "voting.deadline": admin.firestore.Timestamp.fromDate(votingDeadline),
+        "voting.votes": {},
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`[onChallengeClipUpdate] Challenge ${context.params.challengeId} both clips ready, entering voting phase`);
+
+      // TODO: Trigger push notification to both participants
+    }
+  });
 
 export { createBounty, submitClaim, castVote, payOutClaim, expireBounties };
