@@ -137,7 +137,7 @@ export function AddSpotModal({ isOpen, onClose, userLocation }: AddSpotModalProp
             Add New Spot
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            Drop a pin at your current location to share this spot with the community.
+            Click on the map to place your spot, then fill in the details below.
           </DialogDescription>
         </DialogHeader>
 
@@ -154,8 +154,8 @@ export function AddSpotModal({ isOpen, onClose, userLocation }: AddSpotModalProp
 
           {!isLocationReady && (
             <div className="flex items-center gap-2 p-2 bg-orange-900/30 rounded-md border border-orange-700/50">
-              <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />
-              <span className="text-sm text-orange-400">Getting your location...</span>
+              <MapPin className="w-4 h-4 text-orange-400" />
+              <span className="text-sm text-orange-400">Click on the map to select a location</span>
             </div>
           )}
 
