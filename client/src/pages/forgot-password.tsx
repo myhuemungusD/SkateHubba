@@ -25,7 +25,14 @@ export default function ForgotPasswordPage() {
         description: "Check your inbox for password reset instructions.",
       });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to send reset email";
+      let errorMessage = "Failed to send reset email";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === "object" && "message" in err) {
+        errorMessage = String((err as { message: unknown }).message);
+      }
+      
       toast({
         title: "Reset Failed",
         description: errorMessage,
