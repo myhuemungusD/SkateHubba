@@ -54,4 +54,4 @@ CREATE INDEX IF NOT EXISTS "IDX_check_ins_user" ON "check_ins" ("user_id");
 CREATE INDEX IF NOT EXISTS "IDX_check_ins_spot" ON "check_ins" ("spot_id");
 
 -- Unique constraint: one check-in per user per spot per day
-CREATE UNIQUE INDEX IF NOT EXISTS "unique_check_in_per_day" ON "check_ins" ("user_id", "spot_id", DATE("timestamp"));
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_check_in_per_day" ON "check_ins" ("user_id", "spot_id", (DATE("timestamp")));
