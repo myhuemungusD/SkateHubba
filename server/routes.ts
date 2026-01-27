@@ -19,7 +19,7 @@ import crypto from "node:crypto";
 import { BetaSignupInput } from "@shared/validation/betaSignup";
 import { admin } from "./admin";
 import { env } from "./config/env";
-import { authenticateUser } from "./auth/middleware";
+import { authenticateUser, requireEmailVerification } from "./auth/middleware";
 import { verifyAndCheckIn } from "./services/spotService";
 import { analyticsRouter } from "./routes/analytics";
 import { metricsRouter } from "./routes/metrics";
@@ -99,6 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/spots",
     authenticateUser,
+    requireEmailVerification,
     publicWriteLimiter,
     perUserSpotWriteLimiter,
     requireCsrfToken,
