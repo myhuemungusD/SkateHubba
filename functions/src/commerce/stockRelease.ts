@@ -96,9 +96,9 @@ export async function releaseHoldAtomic(orderId: string, seed: string): Promise<
 
   // Chunk operations if needed to stay under 500 limit
   const chunks: BatchOp[][] = [];
-  for (let i = 0; i < ops.length; i += MAX_BATCH_OPS - 1) {
-    // Reserve 1 for hold update
-    chunks.push(ops.slice(i, i + MAX_BATCH_OPS - 1));
+  for (let i = 0; i < ops.length; i += MAX_BATCH_OPS) {
+    // Reserve 1 for hold update (only added to last batch)
+    chunks.push(ops.slice(i, i + MAX_BATCH_OPS));
   }
 
   // Execute batches
