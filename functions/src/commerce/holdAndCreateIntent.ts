@@ -174,6 +174,14 @@ async function validateAndLoadProducts(
       throw new HttpsError("failed-precondition", `Product ${item.productId} is not available`);
     }
 
+    // Validate shards field for stock reservation
+    if (!Number.isInteger(product.shards) || product.shards <= 0) {
+      throw new HttpsError(
+        "internal",
+        `Product ${item.productId} has invalid shards configuration`
+      );
+    }
+
     // Check maxPerUser limit
     if (product.maxPerUser && item.qty > product.maxPerUser) {
       throw new HttpsError(
