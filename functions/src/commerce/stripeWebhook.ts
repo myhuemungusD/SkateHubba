@@ -39,30 +39,48 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent): Prom
   const db = getAdminDb();
   const orderRef = db.collection("orders").doc(orderId);
 
-  await db.runTransaction(async (transaction) => {
-    const orderSnap = await transaction.get(orderRef);
+  try {
+    await db.runTransaction(async (transaction) => {
+      const orderSnap = await transaction.get(orderRef);
 
-    if (!orderSnap.exists) {
-      logger.error("Order not found for successful payment", { orderId });
-      return;
-    }
+      if (!orderSnap.exists) {
+        logger.error("Order not found for successful payment", { orderId });
+        return;
+      }
 
-    const order = orderSnap.data() as OrderDoc;
+      const order = orderSnap.data() as OrderDoc;
 
-    if (order.status === "paid") {
-      logger.info("Order already marked as paid", { orderId });
-      return;
-    }
+      if (order.status === "paid") {
+        logger.info("Order already marked as paid", { orderId });
+        return;
+      }
 
-    transaction.update(orderRef, {
-      status: "paid",
-      paidAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      transaction.update(orderRef, {
+        status: "paid",
+        paidAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
     });
-  });
+  } catch (error) {
+    logger.error("Failed to update order status to paid", {
+      orderId,
+      paymentIntentId: paymentIntent.id,
+      error,
+    });
+    throw error;
+  }
 
   // Consume the hold (mark inventory as permanently sold)
-  await consumeHold(orderId);
+  try {
+    await consumeHold(orderId);
+  } catch (error) {
+    logger.error("Failed to consume hold after payment succeeded", {
+      orderId,
+      paymentIntentId: paymentIntent.id,
+      error,
+    });
+    throw error;
+  }
 
   logger.info("Payment succeeded, order updated", {
     orderId,
@@ -87,33 +105,51 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise
   const db = getAdminDb();
   const orderRef = db.collection("orders").doc(orderId);
 
-  await db.runTransaction(async (transaction) => {
-    const orderSnap = await transaction.get(orderRef);
+  try {
+    await db.runTransaction(async (transaction) => {
+      const orderSnap = await transaction.get(orderRef);
 
-    if (!orderSnap.exists) {
-      logger.error("Order not found for failed payment", { orderId });
-      return;
-    }
+      if (!orderSnap.exists) {
+        logger.error("Order not found for failed payment", { orderId });
+        return;
+      }
 
-    const order = orderSnap.data() as OrderDoc;
+      const order = orderSnap.data() as OrderDoc;
 
-    if (order.status !== "pending") {
-      logger.info("Order not in pending status, skipping cancel", {
-        orderId,
-        currentStatus: order.status,
+      if (order.status !== "pending") {
+        logger.info("Order not in pending status, skipping cancel", {
+          orderId,
+          currentStatus: order.status,
+        });
+        return;
+      }
+
+      transaction.update(orderRef, {
+        status: "canceled",
+        canceledAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
       });
-      return;
-    }
-
-    transaction.update(orderRef, {
-      status: "canceled",
-      canceledAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
     });
-  });
+  } catch (error) {
+    logger.error("Failed to update order status to canceled", {
+      orderId,
+      paymentIntentId: paymentIntent.id,
+      error,
+    });
+    throw error;
+  }
 
   // Release the held inventory back to stock
-  await releaseHoldAtomic(orderId, orderId);
+  try {
+    await releaseHoldAtomic(orderId, orderId);
+  } catch (error) {
+    logger.error("Failed to release hold after payment failed", {
+      orderId,
+      paymentIntentId: paymentIntent.id,
+      error,
+    });
+    throw error;
+  }
 
   logger.info("Payment failed, order canceled and stock released", {
     orderId,
