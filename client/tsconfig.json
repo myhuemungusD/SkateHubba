@@ -16,6 +16,6 @@
     },
     "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo"
   },
-  "include": ["src", "../packages/shared", "vite.config.ts", "postcss.config.js", "index.html"],
+  "include": ["src", "../packages/shared", "vite.config.ts", "postcss.config.cjs", "index.html"],
   "exclude": ["../packages/shared/__tests__/**"]
 }
