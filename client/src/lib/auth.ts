@@ -1,3 +1,17 @@
+/**
+ * Unified Authentication Module
+ *
+ * Single entry point for all authentication operations.
+ * Handles both Firebase authentication and backend session management.
+ *
+ * Flow:
+ * 1. User authenticates with Firebase (email/password, Google, anonymous)
+ * 2. Firebase ID token is sent to backend
+ * 3. Backend creates session and returns user data
+ *
+ * @module lib/auth
+ */
+
 import type { User } from "firebase/auth";
 import {
   createUserWithEmailAndPassword,
@@ -7,90 +21,78 @@ import {
   signInWithPhoneNumber,
   RecaptchaVerifier,
   GoogleAuthProvider,
-  signInWithPopup as firebaseSignInWithPopup,
-  signInWithRedirect as firebaseSignInWithRedirect,
-  getRedirectResult as firebaseGetRedirectResult,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInAnonymously as firebaseSignInAnonymously,
   updateProfile,
   type ConfirmationResult,
 } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth } from "./firebase/config";
 import { apiRequest } from "./api/client";
 
-/**
- * Check if we're running in mock Firebase mode
- * This is true when Firebase API keys are not configured
- */
-function isMockMode(): boolean {
-  return !!(auth as any)?._isMock;
-}
+// ============================================================================
+// Types
+// ============================================================================
 
-/**
- * Wrapper for signOut that handles mock mode
- */
-async function signOut(authInstance: typeof auth): Promise<void> {
-  if (isMockMode()) {
-    await (authInstance as any).signOut();
-  } else {
-    await firebaseSignOut(authInstance);
-  }
-}
-
-/**
- * Wrapper for signInAnonymously that handles mock mode
- */
-async function signInAnonymously(authInstance: typeof auth): Promise<{ user: any }> {
-  if (isMockMode()) {
-    return await (authInstance as any).signInAnonymously();
-  }
-  return await firebaseSignInAnonymously(authInstance);
-}
-
-/**
- * Wrapper for signInWithPopup that handles mock mode
- */
-async function signInWithPopup(
-  authInstance: typeof auth,
-  provider: GoogleAuthProvider
-): Promise<{ user: any }> {
-  if (isMockMode()) {
-    return await (authInstance as any).signInWithPopup(provider);
-  }
-  return await firebaseSignInWithPopup(authInstance, provider);
-}
-
-/**
- * Wrapper for signInWithRedirect that handles mock mode
- */
-async function signInWithRedirect(
-  authInstance: typeof auth,
-  provider: GoogleAuthProvider
-): Promise<void> {
-  if (isMockMode()) {
-    await (authInstance as any).signInWithRedirect(provider);
-  } else {
-    await firebaseSignInWithRedirect(authInstance, provider);
-  }
-}
-
-/**
- * Wrapper for getRedirectResult that handles mock mode
- */
-async function getRedirectResult(authInstance: typeof auth): Promise<{ user: any } | null> {
-  if (isMockMode()) {
-    return await (authInstance as any).getRedirectResult();
-  }
-  return await firebaseGetRedirectResult(authInstance);
-}
-
-type RegistrationProfile = {
+export type RegistrationProfile = {
   firstName?: string;
   lastName?: string;
 };
 
-type BackendProfile = RegistrationProfile & {
-  isRegistration?: boolean;
+export interface AuthResponse {
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    photoUrl: string | null;
+    roles: string[];
+    createdAt: string;
+    provider: string;
+  };
+  strategy: string;
+}
+
+export interface AuthError extends Error {
+  code?: string;
+}
+
+// ============================================================================
+// Error Messages
+// ============================================================================
+
+const ERROR_MESSAGES: Record<string, string> = {
+  "auth/email-already-in-use": "An account with this email already exists.",
+  "auth/invalid-email": "Please enter a valid email address.",
+  "auth/weak-password": "Password must be at least 6 characters.",
+  "auth/user-disabled": "This account has been disabled.",
+  "auth/user-not-found": "No account found with this email.",
+  "auth/wrong-password": "Incorrect password.",
+  "auth/invalid-credential": "Invalid email or password.",
+  "auth/too-many-requests": "Too many attempts. Please try again later.",
+  "auth/network-request-failed": "Network error. Check your connection.",
+  "auth/popup-closed-by-user": "Sign-in was cancelled.",
+  "auth/popup-blocked": "Pop-up blocked. Please allow pop-ups and try again.",
+  "auth/account-exists-with-different-credential":
+    "An account already exists with this email using a different sign-in method.",
+  "auth/cancelled-popup-request": "Sign-in was cancelled.",
+  "auth/user-cancelled": "Sign-in was cancelled.",
+  "auth/credential-already-in-use": "This credential is already associated with a different account.",
 };
+
+function createAuthError(error: unknown): AuthError {
+  const firebaseError = error as { code?: string; message?: string };
+  const code = firebaseError.code || "unknown";
+  const message = ERROR_MESSAGES[code] || firebaseError.message || "Authentication failed";
+
+  const authError = new Error(message) as AuthError;
+  authError.code = code;
+  return authError;
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
 
 function extractNameParts(displayName?: string) {
   if (!displayName) {
@@ -107,269 +109,213 @@ function extractNameParts(displayName?: string) {
   return { firstName, lastName };
 }
 
-async function authenticateWithBackend(firebaseUser: User, profile: BackendProfile = {}) {
+function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function isEmbeddedBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return (
+    ua.includes("FBAN") ||
+    ua.includes("FBAV") ||
+    ua.includes("Instagram") ||
+    ua.includes("Twitter") ||
+    ua.includes("TikTok") ||
+    (ua.includes("wv") && ua.includes("Android"))
+  );
+}
+
+// ============================================================================
+// Backend Authentication
+// ============================================================================
+
+/**
+ * Authenticate with the backend after Firebase sign-in.
+ * Creates a session and returns user data.
+ */
+async function authenticateWithBackend(
+  firebaseUser: User,
+  profile: { firstName?: string; lastName?: string; isRegistration?: boolean } = {}
+): Promise<AuthResponse> {
   const idToken = await firebaseUser.getIdToken();
   const derivedNames = extractNameParts(firebaseUser.displayName ?? undefined);
 
   const payload: Record<string, unknown> = {};
 
   const firstName = profile.firstName ?? derivedNames.firstName;
-  if (firstName) {
-    payload.firstName = firstName;
-  }
+  if (firstName) payload.firstName = firstName;
 
   const lastName = profile.lastName ?? derivedNames.lastName;
-  if (lastName) {
-    payload.lastName = lastName;
-  }
+  if (lastName) payload.lastName = lastName;
 
   if (typeof profile.isRegistration === "boolean") {
     payload.isRegistration = profile.isRegistration;
   }
 
-  try {
-    return await apiRequest({
-      method: "POST",
-      path: "/api/auth/login",
-      body: payload,
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-    throw new Error("Login failed");
-  }
+  return apiRequest<AuthResponse>({
+    method: "POST",
+    path: "/api/auth/login",
+    body: payload,
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
 }
 
+// ============================================================================
+// Email/Password Authentication
+// ============================================================================
+
+/**
+ * Register a new user with email and password.
+ * Sends verification email after registration.
+ */
 export async function registerUser(
   email: string,
   password: string,
   profile: RegistrationProfile = {}
-) {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  const firebaseUser = userCredential.user;
-
-  const displayName = `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim();
-  if (displayName.length > 0) {
-    await updateProfile(firebaseUser, { displayName });
-  }
-
-  await sendEmailVerification(firebaseUser);
-
-  return firebaseUser;
-}
-
-export async function loginUser(email: string, password: string) {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
-  const firebaseUser = userCredential.user;
-
-  if (!firebaseUser.emailVerified) {
-    await signOut(auth);
-    throw new Error("Please verify your email before logging in.");
-  }
-
-  return authenticateWithBackend(firebaseUser);
-}
-
-/**
- * Professional Google Sign-In with automatic fallback and error handling
- * - Tries popup first (better UX on desktop)
- * - Falls back to redirect on popup blockers or mobile
- * - Distinguishes Firebase errors from backend errors
- * - Provides clear error messages for each scenario
- */
-export async function loginWithGoogle(forceRedirect = false) {
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({
-    prompt: "select_account",
-    // Request user's basic profile and email
-    scope: "profile email",
-  });
-
-  // Mobile detection - prefer redirect on mobile devices
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
-
-  console.log("[Google Auth] Starting login, isMobile:", isMobile, "forceRedirect:", forceRedirect);
-  console.log("[Google Auth] User agent:", navigator.userAgent);
-
-  if (forceRedirect || isMobile) {
-    // Use redirect flow (better for mobile)
-    console.log("[Google Auth] Using redirect flow for mobile/forced redirect");
-    try {
-      // Set flag so we know to show welcome toast when returning from redirect
-      sessionStorage.setItem("googleRedirectPending", "true");
-      await signInWithRedirect(auth, provider);
-    } catch (redirectError: any) {
-      // Clear flag on error
-      sessionStorage.removeItem("googleRedirectPending");
-      console.error("[Google Auth] Redirect initiation failed:", redirectError);
-      throw new Error(
-        `Failed to start Google Sign-In: ${redirectError?.message || "Unknown error"}`
-      );
-    }
-    // Note: User will be redirected away, control returns via handleGoogleRedirectResult() in AuthContext
-    return null;
-  }
-
-  // Desktop: Try popup first
-  let firebaseUser: User;
-
+): Promise<User> {
   try {
-    // Step 1: Firebase popup authentication
-    const userCredential = await signInWithPopup(auth, provider);
-    firebaseUser = userCredential.user;
-  } catch (error: any) {
-    // Handle Firebase popup errors (not backend errors)
-    const errorCode = error?.code || "";
-    const errorMessage = error?.message || "";
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
 
-    // Popup blocked or closed by user - fallback to redirect
-    if (
-      errorCode === "auth/popup-blocked" ||
-      errorCode === "auth/popup-closed-by-user" ||
-      errorMessage.includes("popup")
-    ) {
-      console.log("[Google Auth] Popup blocked, falling back to redirect...");
-      await signInWithRedirect(auth, provider);
-      return null;
+    const displayName = `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim();
+    if (displayName.length > 0) {
+      await updateProfile(firebaseUser, { displayName });
     }
 
-    // User cancelled
-    if (errorCode === "auth/cancelled-popup-request" || errorCode === "auth/user-cancelled") {
-      throw new Error("Google Sign-In was cancelled");
-    }
+    await sendEmailVerification(firebaseUser);
 
-    // Network errors
-    if (errorCode === "auth/network-request-failed" || errorMessage.includes("network")) {
-      throw new Error("Network error. Please check your connection and try again.");
-    }
-
-    // Account exists with different credential
-    if (errorCode === "auth/account-exists-with-different-credential") {
-      throw new Error("An account already exists with this email using a different sign-in method");
-    }
-
-    // Too many requests
-    if (errorCode === "auth/too-many-requests") {
-      throw new Error("Too many sign-in attempts. Please try again in a few minutes.");
-    }
-
-    // Generic Firebase error - try redirect as last resort
-    console.warn("[Google Auth] Firebase popup failed, attempting redirect fallback:", errorCode);
-    try {
-      await signInWithRedirect(auth, provider);
-      return null;
-    } catch (redirectError: any) {
-      throw new Error(`Google Sign-In failed: ${redirectError?.message || "Unknown error"}`);
-    }
-  }
-
-  // Step 2: Backend authentication (separate from Firebase errors)
-  try {
-    return await authenticateWithBackend(firebaseUser);
-  } catch (backendError: any) {
-    // Backend authentication failed - do NOT fallback to redirect
-    // User successfully signed in with Google, but backend rejected them
-    // Sign out from Firebase to avoid broken state
-    await signOut(auth);
-
-    // Re-throw backend error so UI can show it directly
-    throw new Error(backendError?.message || "Server authentication failed. Please try again.");
+    return firebaseUser;
+  } catch (error) {
+    throw createAuthError(error);
   }
 }
 
 /**
- * Handle Google redirect result after user returns from Google login page
- * Call this on app initialization to complete redirect-based sign-in
+ * Sign in with email and password.
+ * Requires email to be verified.
  */
-export async function handleGoogleRedirect() {
-  console.log("[Google Auth] handleGoogleRedirect called");
-
+export async function loginUser(email: string, password: string): Promise<AuthResponse> {
   try {
-    if (!auth || typeof auth.onAuthStateChanged !== "function") {
-      console.log("[Google Auth] Auth not ready, skipping redirect check");
-      return null;
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
+
+    if (!firebaseUser.emailVerified) {
+      await firebaseSignOut(auth);
+      const error = new Error("Please verify your email before logging in.") as AuthError;
+      error.code = "auth/email-not-verified";
+      throw error;
     }
 
-    // Skip redirect handling in mock mode - mock signInWithRedirect completes synchronously
-    // and doesn't require redirect result processing
-    if (isMockMode()) {
-      console.log("[Google Auth] Mock mode, skipping redirect check");
-      return null;
-    }
+    return authenticateWithBackend(firebaseUser);
+  } catch (error) {
+    throw createAuthError(error);
+  }
+}
 
-    console.log("[Google Auth] Checking for redirect result...");
-    const result = await getRedirectResult(auth);
+// ============================================================================
+// Google OAuth Authentication
+// ============================================================================
 
-    if (result) {
-      // User just returned from Google redirect
-      console.log("[Google Auth] Redirect result found, user:", result.user?.uid);
-      const firebaseUser = result.user;
-      return authenticateWithBackend(firebaseUser);
-    }
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: "select_account",
+});
 
-    console.log("[Google Auth] No redirect result (normal page load)");
-    return null; // No redirect result (normal page load)
-  } catch (error: any) {
-    console.error("[Google Auth] handleGoogleRedirect error:", error);
-    const errorCode = error?.code || "";
-
-    // Handle specific redirect errors
-    if (errorCode === "auth/account-exists-with-different-credential") {
-      throw new Error("An account already exists with this email using a different sign-in method");
-    }
-
-    if (errorCode === "auth/credential-already-in-use") {
-      throw new Error("This credential is already associated with a different account");
-    }
-
+/**
+ * Sign in with Google OAuth.
+ * Uses popup on desktop, redirect on mobile.
+ *
+ * @param forceRedirect - Force redirect flow instead of popup
+ * @returns AuthResponse or null if redirect was triggered
+ */
+export async function loginWithGoogle(forceRedirect = false): Promise<AuthResponse | null> {
+  if (isEmbeddedBrowser()) {
+    const error = new Error(
+      "Google Sign-In is not supported in embedded browsers. Open in Safari or Chrome."
+    ) as AuthError;
+    error.code = "auth/embedded-browser";
     throw error;
   }
-}
 
-export async function loginAnonymously() {
-  const userCredential = await signInAnonymously(auth);
-  const firebaseUser = userCredential.user;
-
-  return authenticateWithBackend(firebaseUser);
-}
-
-export async function logoutUser() {
   try {
-    await apiRequest({
-      method: "POST",
-      path: "/api/auth/logout",
-    });
-  } catch (error) {
-    console.error("Backend logout failed:", error);
-  }
-
-  await signOut(auth);
-}
-
-export const listenToAuth = (callback: (user: User | null) => void) => {
-  try {
-    if (!auth || typeof auth.onAuthStateChanged !== "function") {
-      console.warn("[Auth] Firebase Auth not fully initialized, skipping listener");
-      if (typeof callback === "function") callback(null);
-      return () => {};
+    // Mobile or forced redirect: use redirect flow
+    if (forceRedirect || isMobileDevice()) {
+      sessionStorage.setItem("googleRedirectPending", "true");
+      await signInWithRedirect(auth, googleProvider);
+      return null;
     }
-    return auth.onAuthStateChanged(callback);
-  } catch (error) {
-    console.error("[Auth] listenToAuth error:", error);
-    if (typeof callback === "function") callback(null);
-    return () => {};
-  }
-};
 
+    // Desktop: try popup first
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      return authenticateWithBackend(userCredential.user);
+    } catch (popupError) {
+      const error = popupError as { code?: string };
+
+      // Fallback to redirect if popup is blocked or closed
+      if (error.code === "auth/popup-blocked" || error.code === "auth/popup-closed-by-user") {
+        sessionStorage.setItem("googleRedirectPending", "true");
+        await signInWithRedirect(auth, googleProvider);
+        return null;
+      }
+
+      throw popupError;
+    }
+  } catch (error) {
+    sessionStorage.removeItem("googleRedirectPending");
+    throw createAuthError(error);
+  }
+}
+
+/**
+ * Handle Google redirect result after returning from Google.
+ * Call this on app initialization.
+ */
+export async function handleGoogleRedirect(): Promise<AuthResponse | null> {
+  try {
+    const result = await getRedirectResult(auth);
+
+    if (result?.user) {
+      sessionStorage.removeItem("googleRedirectPending");
+      return authenticateWithBackend(result.user);
+    }
+
+    return null;
+  } catch (error) {
+    sessionStorage.removeItem("googleRedirectPending");
+    throw createAuthError(error);
+  }
+}
+
+// ============================================================================
+// Anonymous Authentication
+// ============================================================================
+
+/**
+ * Sign in anonymously as a guest.
+ */
+export async function loginAnonymously(): Promise<AuthResponse> {
+  try {
+    const userCredential = await firebaseSignInAnonymously(auth);
+    return authenticateWithBackend(userCredential.user);
+  } catch (error) {
+    throw createAuthError(error);
+  }
+}
+
+// ============================================================================
 // Phone Authentication
+// ============================================================================
+
 let activeRecaptcha: RecaptchaVerifier | null = null;
 
+/**
+ * Setup reCAPTCHA for phone authentication.
+ */
 export async function setupRecaptcha(elementId: string): Promise<RecaptchaVerifier> {
   if (typeof window === "undefined") {
     throw new Error("reCAPTCHA can only be initialized in the browser.");
@@ -382,36 +328,99 @@ export async function setupRecaptcha(elementId: string): Promise<RecaptchaVerifi
 
   activeRecaptcha = new RecaptchaVerifier(auth, elementId, {
     size: "invisible",
-    callback: () => {
-      // reCAPTCHA solved - Firebase will continue with phone auth
-    },
   });
 
   await activeRecaptcha.render();
   return activeRecaptcha;
 }
 
+/**
+ * Send phone verification code.
+ */
 export async function sendPhoneVerification(
   phoneNumber: string,
   recaptchaVerifier: RecaptchaVerifier
-) {
+): Promise<ConfirmationResult> {
   const normalizedPhone = phoneNumber.replace(/[\s-]/g, "").trim();
 
   if (!normalizedPhone.startsWith("+")) {
     throw new Error("Enter the phone number in international format, e.g. +1 555 555 5555.");
   }
 
-  return signInWithPhoneNumber(auth, normalizedPhone, recaptchaVerifier);
+  try {
+    return await signInWithPhoneNumber(auth, normalizedPhone, recaptchaVerifier);
+  } catch (error) {
+    throw createAuthError(error);
+  }
 }
 
-export async function verifyPhoneCode(confirmationResult: ConfirmationResult, code: string) {
+/**
+ * Verify phone code and complete sign-in.
+ */
+export async function verifyPhoneCode(
+  confirmationResult: ConfirmationResult,
+  code: string
+): Promise<AuthResponse> {
   const sanitizedCode = code.trim();
   if (!sanitizedCode) {
     throw new Error("Enter the verification code sent to your phone.");
   }
 
-  const userCredential = await confirmationResult.confirm(sanitizedCode);
-  const firebaseUser = userCredential.user;
+  try {
+    const userCredential = await confirmationResult.confirm(sanitizedCode);
+    return authenticateWithBackend(userCredential.user);
+  } catch (error) {
+    throw createAuthError(error);
+  }
+}
 
-  return authenticateWithBackend(firebaseUser);
+// ============================================================================
+// Session Management
+// ============================================================================
+
+/**
+ * Sign out the current user.
+ * Clears both Firebase and backend sessions.
+ */
+export async function logoutUser(): Promise<void> {
+  try {
+    await apiRequest({
+      method: "POST",
+      path: "/api/auth/logout",
+    });
+  } catch (error) {
+    console.error("[Auth] Backend logout failed:", error);
+    // Continue with Firebase logout even if backend fails
+  }
+
+  await firebaseSignOut(auth);
+}
+
+/**
+ * Listen to Firebase auth state changes.
+ */
+export function listenToAuth(callback: (user: User | null) => void): () => void {
+  if (!auth || typeof auth.onAuthStateChanged !== "function") {
+    console.warn("[Auth] Firebase Auth not initialized");
+    callback(null);
+    return () => {};
+  }
+
+  return auth.onAuthStateChanged(callback);
+}
+
+/**
+ * Get current Firebase user.
+ */
+export function getCurrentUser(): User | null {
+  return auth.currentUser;
+}
+
+/**
+ * Get Firebase ID token for the current user.
+ */
+export async function getIdToken(): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+  return user.getIdToken();
 }
