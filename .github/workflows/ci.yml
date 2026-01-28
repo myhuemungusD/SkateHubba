@@ -1,42 +1,24 @@
-name: CI - The Daily Grind
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
+env:
+  NODE_VERSION: '20'
+
 jobs:
-  # Lockfile integrity check - fails fast if package.json and lockfile are out of sync
-  lockfile_check:
-    name: "🔒 Lockfile Integrity"
+  # ============================================================================
+  # VALIDATION - Runs first, must pass before builds
+  # ============================================================================
+  validate:
+    name: "Validate"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/setup-pnpm-env
-      
-      - name: Verify lockfile is up-to-date
-        run: |
-          echo "Checking if pnpm-lock.yaml matches package.json..."
-          pnpm install --frozen-lockfile --ignore-scripts
-          echo "✅ Lockfile is in sync with package.json"
-
-  build_lint_typecheck:
-    name: "Quality Control"
-    needs: lockfile_check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Show git ref + commit
-        run: |
-          echo "ref=$GITHUB_REF"
-          echo "sha=$GITHUB_SHA"
-          git log -1 --oneline
 
       - uses: ./.github/actions/setup-pnpm-env
 
@@ -49,45 +31,142 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Build
-        run: pnpm run build
-
-      - name: Test with Coverage
+      - name: Test
         run: pnpm vitest run --coverage
-        
-      - name: Generate Coverage Badge
-        if: github.ref == 'refs/heads/main'
-        uses: jaywcjlove/coverage-badges-cli@main
-        with:
-          source: coverage/coverage-summary.json
-          output: coverage/badge.svg
-          
-      - name: Upload Coverage Report
+
+      - name: Upload Coverage
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
-          retention-days: 30
+          retention-days: 14
 
-      # ARTIFACT MANAGEMENT
-      - name: Upload build artifact
-        if: success()
+  # ============================================================================
+  # BUILD WEB - Runs in parallel with mobile after validation
+  # ============================================================================
+  build-web:
+    name: "Build Web"
+    needs: validate
+    runs-on: ubuntu-latest
+    env:
+      # Firebase config from secrets
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-pnpm-env
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Client
+        run: pnpm --filter skatehubba-client build
+
+      - name: Upload Web Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist
-          retention-days: 5
+          name: web-dist
+          path: client/dist
+          retention-days: 7
 
-  rules_scan:
-    name: "Security Guardrail"
+  # ============================================================================
+  # BUILD MOBILE - Runs in parallel with web after validation
+  # ============================================================================
+  build-mobile:
+    name: "Build Mobile (EAS)"
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-pnpm-env
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Preview (iOS + Android)
+        run: eas build --platform all --profile preview --non-interactive --no-wait
+        # --no-wait queues the build without blocking CI (saves build minutes)
+
+  # ============================================================================
+  # DEPLOY WEB - Only runs on push to main, after web build succeeds
+  # ============================================================================
+  deploy-web:
+    name: "Deploy to Vercel"
+    needs: build-web
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-pnpm-env
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download Web Build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: client/dist
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build for Vercel (with Firebase env)
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Deploy to Vercel Production
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # ============================================================================
+  # SECURITY CHECKS - Run in parallel with validation
+  # ============================================================================
+  security:
+    name: "Security Scan"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Block insecure Firestore/Storage rules
+      - name: Block insecure Firebase rules
         run: |
           bad=0
           for f in firestore.rules storage.rules; do
@@ -98,44 +177,6 @@ jobs:
           done
           if [ $bad -eq 1 ]; then exit 1; fi
 
-  # Firebase Rules Verification (protected branches only)
-  firebase_rules_verify:
-    name: "🔥 Firebase Rules Validation"
-    runs-on: ubuntu-latest
-    # Security: Only run on protected branches, not on forks
-    if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      github.repository == 'myhuemungusD/skatehubba1'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: ./.github/actions/setup-pnpm-env
-
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
-
-      - name: Mask Firebase Token
-        run: echo "::add-mask::${{ secrets.FIREBASE_TOKEN }}"
-
-      - name: Verify Firebase Rules
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: node scripts/verify-firebase-rules.mjs
-
-  # Secret scanning with gitleaks (main branch only)
-  secret_scan:
-    name: "No Secrets in Repo"
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for gitleaks to scan commit ranges
-
       - name: Block merge conflict markers
         run: |
           ! grep -RIn "^[<=>]\{7\}" -- . \
@@ -143,7 +184,8 @@ jobs:
             --exclude-dir=.git \
             --exclude=pnpm-lock.yaml
 
-      - name: Gitleaks scan
+      - name: Gitleaks Secret Scan
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: gitleaks/gitleaks-action@v2
         env:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
