@@ -18,11 +18,7 @@ import * as os from "os";
 import * as fs from "fs";
 import ffmpeg from "fluent-ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
-import { createBounty } from "./bounties/createBounty";
-import { submitClaim } from "./bounties/submitClaim";
-import { castVote } from "./bounties/castVote";
-import { payOutClaim } from "./bounties/payOutClaim";
-import { expireBounties } from "./bounties/expireBounties";
+// Bounties feature archived - see archive/functions-src/bounties/
 
 // Initialize Firebase Admin if not already done
 if (!admin.apps.length) {
@@ -371,8 +367,6 @@ export const validateChallengeVideo = functions.storage.object().onFinalize(asyn
     }
   }
 });
-
-export { createBounty, submitClaim, castVote, payOutClaim, expireBounties };
 
 // Commerce exports
 export { holdAndCreatePaymentIntent } from "./commerce/holdAndCreateIntent";
